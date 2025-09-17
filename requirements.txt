@@ -5,3 +5,8 @@ pydantic==2.11.9
 pydantic-settings
 python-dotenv==1.1.1
 redis==6.4.0
+beautifulsoup4
+lxml
+requests
+selectolax
+pyquery

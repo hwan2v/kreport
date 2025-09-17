@@ -1,45 +1,57 @@
-#### 버전
-opensearch 2.17.1
-python 3.11
+# 과제
+
+## 문제 요약
+ * 텍스트 검색 서비스에 필요한 기능들을 제공하는 프로그램을 개발하고자 합니다. 
+ * [문제#1]제공된 문서들을 검색할 수 있는 형태로 가공하여 
+ * [문제#2]Opensearch에 적재하고, 
+ * [문제#3]적재된 문서들을 바탕으로 검색할 수 있는 API 서버와, 
+ * [문제#4]검색 결과 Report를 제공하는 프로그램을 Python으로 개발합니다.
+ * 검색 Input/Output은 report_app/resources/data/report.tsv 에 ‘질문’과 ‘필수 포함 text’를 참고하세요.
 
 
-
-
-## 초기 설정
-
-
+## 프로젝트 구조
+```plaintext
+project/ 
+├── api_server/ 
+│ ├── README.md
+│ ├── resources /
+│ │ ├── data /
+│ │ │ ├── json /
+│ │ │ ├── html /
+│ │ │ │ ├── day_1 /
+│ │ │ │ ├── day_2 /
+│ │ │ │ └── day_3 /
+│ ├─├─├── tsv /
+│ │ │ │ ├── day_1 /
+│ │ │ │ ├── day_2 /
+│ └─└─└─└── day_3 /
+├── report_app/ 
+│ ├── README.md
+│ ├── resources /
+│ │ ├── data /
+│ └─└─└── report.tsv
+├── README.md 
+└── compose.yml
 ```
-# wsl ubuntu
+- **api_server/**: 검색 서비스 API 서버를 개발하는 디렉토리입니다. 문제 #1,2,3를 해결합니다. 
+  - **README.md**: 서버의 실행 방법을 포함하여 과제 구성 혹은 풀이 등을 자유롭게 기재해주세요.
+  - **resources/**: 과제에 필요한 리소스를 저장하는 디렉토리입니다.
+    - **data/**: 과제에 필요한 데이터 파일을 모아놓은 디렉토리 입니다.
+      - html/: 검색 대상 html 문서를 제공하는 디렉토리 입니다.
+        - day_1/: 첫 번째 날에 제공된 html 문서들을 저장하는 디렉토리입니다.
+        - day_2/: 두 번째 날에 제공된 html 문서들을 저장하는 디렉토리입니다. 첫 번째 날에 제공된 문서에서 일부 문서가 추가되거나 삭제되었습니다.
+        - day_3/: 세 번째 날에 제공된 html 문서들을 저장하는 디렉토리입니다. 두 번째 날에 제공된 문서에서 일부 문서가 변경되었습니다.
+      - tsv/: 검색 대상 tsv 문서를 제공하는 디렉토리 입니다.
+        - day_1/: 첫 번째 날에 제공된 tsv 문서를 저장하는 디렉토리입니다.
+        - day_2/: 두 번째 날에 제공된 tsv 문서를 저장하는 디렉토리입니다. 첫 번째 날에 제공된 문서에서 일부 문서가 추가되거나 삭제되었습니다.
+        - day_3/: 세 번째 날에 제공된 tsv 문서를 저장하는 디렉토리입니다. 두 번째 날에 제공된 문서에서 일부 문서가 변경되었습니다.
+      - json/ : 원천 데이터 가공 후 JSON파일을 저장하는 디렉토리 입니다.
 
-sudo sysctl -w vm.max_map_count=262144
-echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
-sudo sysctl -p || true
-```
-
-## 아이디어
-
-색인
-  색인을 api로만 받나? docker-compose에서 worker(celery)를 통해 주기적으로 호출하면 안돼?
-  배치?
-  
-확장성
-  k8s 기반의 메니페스트도 작성?
-  argo도 작성? 너무 오바야?
-
-로그
-  로그스태시로 처리할까? 비동기
-  mkdir -p logstash/pipeline
-  mkdir -p logs
-
-보안
-  api-key를 발급받어?
-  opensearch ssl 적용해? 과연 필요할까?
-
-속도 측정
-  단일 쿼리/평균 쿼리
-
-품질
-  ndcg 넣어? 어떻게 해?
-
-스키마
-
+- **report_app/**: 검색 결과 Report를 제공하는 프로그램을 개발하는 디렉토리입니다. 문제 #4를 해결합니다.
+  - **README.md**: report 앱의 실행 방법을 포함하여 과제 구성 혹은 풀이 등을 자유롭게 기재해주세요.
+  - **resources/**: 과제에 필요한 리소스를 저장하는 디렉토리입니다.
+    - **data/**: 과제에 필요한 데이터 파일을 모아놓은 디렉토리 입니다.
+      - report.tsv: 검색 결과 report 생성을 위한 파일입니다.
+      
+- **README.md**: 과제에 대한 요약 및 프로젝트 구조를 설명하는 파일입니다.
+- **compose.yml**: 과제 실행을 위한 docker-compose 참고 파일입니다.

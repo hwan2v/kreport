@@ -7,3 +7,6 @@ AutogluonModels
 mlruns
 venv
 logs
+
+__pycache__
+*.pyc
