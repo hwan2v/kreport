@@ -1,0 +1,24 @@
+{
+    "index_patterns": ["kreport-logs-*"],
+    "data_stream": { },
+    "template": {
+      "settings": {
+        "number_of_shards": 1,
+        "refresh_interval": "5s"
+      },
+      "mappings": {
+        "properties": {
+          "@timestamp": {"type": "date"},
+          "level":      {"type": "keyword"},
+          "logger":     {"type": "keyword"},
+          "trace_id":   {"type": "keyword"},
+          "message":    {"type": "text"},
+          "http_method":{"type": "keyword"},
+          "url_path":   {"type": "keyword"},
+          "http_status":{"type": "integer"},
+          "duration_ms":{"type": "float"}
+        }
+      }
+    }
+  }
+  

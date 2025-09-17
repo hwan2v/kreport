@@ -1,0 +1,4 @@
+node.name: kreport-logstash
+pipeline.workers: 2
+log.level: info
+path.logs: /usr/share/logstash/logs

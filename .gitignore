@@ -1,0 +1,9 @@
+node_modules
+.mcp-cli
+dist
+
+.venv
+AutogluonModels
+mlruns
+venv
+logs

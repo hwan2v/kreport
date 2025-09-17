@@ -1,0 +1,27 @@
+services:
+  opensearch:
+    image: opensearchproject/opensearch:2.17.1
+    environment:
+      - discovery.type=single-node
+      - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=LamarSuper8ow!"
+    ports:
+      - 9200:9200
+      - 9600:9600
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.17.1
+    container_name: opensearch-dashboards
+    ports:
+      - 5601:5601 # Map host port 5601 to container port 5601
+    expose:
+      - "5601" # Expose port 5601 for web access to OpenSearch Dashboards
+    environment:
+      - 'OPENSEARCH_HOSTS=["https://opensearch:9200"]'
+
+  python:
+    image: python:3.11.11-bookworm
+    command: >
+      /bin/sh -c "
+      pip install --upgrade pip &&
+      pip install opensearch-py==2.8.0 && 
+      sleep infinity"

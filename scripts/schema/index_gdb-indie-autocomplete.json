@@ -1,0 +1,536 @@
+{
+  "settings": {
+    "index": {
+      "max_ngram_diff": "100",
+      "analysis": {
+        "tokenizer": {
+          "edge_ngram_tokenizer": {
+            "type": "edge_ngram",
+            "min_gram": 1,
+            "max_gram": 60,
+            "token_chars": [
+              "letter",
+              "digit"
+            ]
+          },
+          "ngram_tokenizer": {
+            "type": "ngram",
+            "min_gram": 2,
+            "max_gram": 60,
+            "token_chars": [
+              "letter",
+              "digit"
+            ]
+          }
+        },
+        "filter": {
+          "edge_ngram_filter": {
+            "type": "edge_ngram",
+            "min_gram": 1,
+            "max_gram": 20
+          }
+        },
+        "char_filter": {
+          "remove_whitespace": {
+            "type": "pattern_replace",
+            "pattern": "\\s+",
+            "replacement": ""
+          }
+        },
+        "analyzer": {
+          "edge_ngram_analyzer": {
+            "type": "custom",
+            "tokenizer": "edge_ngram_tokenizer",
+            "filter": [
+              "lowercase"
+            ]
+          },
+          "no_whitespace_edge_ngram_analyzer": {
+            "type": "custom",
+            "char_filter": [
+              "remove_whitespace"
+            ],
+            "tokenizer": "edge_ngram_tokenizer",
+            "filter": [
+              "lowercase"
+            ]
+          },
+          "ngram_analyzer": {
+            "type": "custom",
+            "tokenizer": "ngram_tokenizer",
+            "filter": [
+              "lowercase"
+            ]
+          },
+          "search_analyzer": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": [
+              "lowercase"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "doc_type": {
+        "type": "keyword"
+      },
+      "completion_keyword": {
+        "properties": {
+          "default": {
+            "type": "text",
+            "analyzer": "edge_ngram_analyzer",
+            "search_analyzer": "search_analyzer",
+            "fields": {
+              "ngram": {
+                "type": "text",
+                "analyzer": "ngram_analyzer",
+                "search_analyzer": "edge_ngram_analyzer"
+              },
+              "no_whitespace_edge_ngram": {
+                "type": "text",
+                "analyzer": "no_whitespace_edge_ngram_analyzer",
+                "search_analyzer": "search_analyzer"
+              }
+            }
+          },
+          "ko": {
+            "type": "text",
+            "analyzer": "edge_ngram_analyzer",
+            "search_analyzer": "search_analyzer",
+            "fields": {
+              "ngram": {
+                "type": "text",
+                "analyzer": "ngram_analyzer",
+                "search_analyzer": "edge_ngram_analyzer"
+              },
+              "no_whitespace_edge_ngram": {
+                "type": "text",
+                "analyzer": "no_whitespace_edge_ngram_analyzer",
+                "search_analyzer": "search_analyzer"
+              }
+            }
+          },
+          "en": {
+            "type": "text",
+            "analyzer": "edge_ngram_analyzer",
+            "search_analyzer": "search_analyzer",
+            "fields": {
+              "ngram": {
+                "type": "text",
+                "analyzer": "ngram_analyzer",
+                "search_analyzer": "edge_ngram_analyzer"
+              },
+              "no_whitespace_edge_ngram": {
+                "type": "text",
+                "analyzer": "no_whitespace_edge_ngram_analyzer",
+                "search_analyzer": "search_analyzer"
+              }
+            }
+          },
+          "ja": {
+            "type": "text",
+            "analyzer": "edge_ngram_analyzer",
+            "search_analyzer": "search_analyzer",
+            "fields": {
+              "ngram": {
+                "type": "text",
+                "analyzer": "ngram_analyzer",
+                "search_analyzer": "edge_ngram_analyzer"
+              },
+              "no_whitespace_edge_ngram": {
+                "type": "text",
+                "analyzer": "no_whitespace_edge_ngram_analyzer",
+                "search_analyzer": "search_analyzer"
+              }
+            }
+          },
+          "zh-cn": {
+            "type": "text",
+            "analyzer": "edge_ngram_analyzer",
+            "search_analyzer": "search_analyzer",
+            "fields": {
+              "ngram": {
+                "type": "text",
+                "analyzer": "ngram_analyzer",
+                "search_analyzer": "edge_ngram_analyzer"
+              },
+              "no_whitespace_edge_ngram": {
+                "type": "text",
+                "analyzer": "no_whitespace_edge_ngram_analyzer",
+                "search_analyzer": "search_analyzer"
+              }
+            }
+          },
+          "zh-tw": {
+            "type": "text",
+            "analyzer": "edge_ngram_analyzer",
+            "search_analyzer": "search_analyzer",
+            "fields": {
+              "ngram": {
+                "type": "text",
+                "analyzer": "ngram_analyzer",
+                "search_analyzer": "edge_ngram_analyzer"
+              },
+              "no_whitespace_edge_ngram": {
+                "type": "text",
+                "analyzer": "no_whitespace_edge_ngram_analyzer",
+                "search_analyzer": "search_analyzer"
+              }
+            }
+          }
+        }
+      },
+      "display": {
+        "type": "boolean"
+      },
+      "shortcut": {
+        "properties": {
+          "default": {
+            "type": "text",
+            "index": false
+          },
+          "ko": {
+            "type": "text",
+            "index": false
+          },
+          "en": {
+            "type": "text",
+            "index": false
+          },
+          "ja": {
+            "type": "text",
+            "index": false
+          },
+          "zh-cn": {
+            "type": "text",
+            "index": false
+          },
+          "zh-tw": {
+            "type": "text",
+            "index": false
+          }
+        }
+      },
+      "thumbnail": {
+        "properties": {
+          "default": {
+            "type": "text",
+            "index": false
+          },
+          "ko": {
+            "type": "text",
+            "index": false
+          },
+          "en": {
+            "type": "text",
+            "index": false
+          },
+          "ja": {
+            "type": "text",
+            "index": false
+          },
+          "zh-cn": {
+            "type": "text",
+            "index": false
+          },
+          "zh-tw": {
+            "type": "text",
+            "index": false
+          }
+        }
+      },
+      "product_name": {
+        "properties": {
+          "default": {
+            "type": "text",
+            "analyzer": "edge_ngram_analyzer",
+            "search_analyzer": "search_analyzer"
+          },
+          "ko": {
+            "type": "text",
+            "analyzer": "edge_ngram_analyzer",
+            "search_analyzer": "search_analyzer"
+          },
+          "en": {
+            "type": "text",
+            "analyzer": "edge_ngram_analyzer",
+            "search_analyzer": "search_analyzer"
+          },
+          "ja": {
+            "type": "text",
+            "analyzer": "edge_ngram_analyzer",
+            "search_analyzer": "search_analyzer"
+          },
+          "zh-cn": {
+            "type": "text",
+            "analyzer": "edge_ngram_analyzer",
+            "search_analyzer": "search_analyzer"
+          },
+          "zh-tw": {
+            "type": "text",
+            "analyzer": "edge_ngram_analyzer",
+            "search_analyzer": "search_analyzer"
+          }
+        }
+      },
+      "product": {
+        "properties": {
+          "product_no": {
+            "type": "long"
+          },
+          "product_type": {
+            "type": "keyword",
+            "index": false
+          },
+          "product_detail_type": {
+            "type": "keyword"
+          },
+          "platform_types": {
+            "type": "keyword"
+          },
+          "game_id": {
+            "type": "keyword"
+          },
+          "shop_item_id": {
+            "type": "long"
+          },
+          "genre_tag": {
+            "type": "integer",
+            "index": false
+          },
+          "restrict_status": {
+            "type": "keyword"
+          },
+          "sale_status": {
+            "type": "keyword"
+          },
+          "product_status": {
+            "type": "keyword"
+          },
+          "display": {
+            "type": "boolean"
+          },
+          "paid": {
+            "type": "boolean"
+          },
+          "demo": {
+            "type": "boolean"
+          }
+        }
+      },
+      "genre": {
+        "properties": {
+          "tag_no": {
+            "type": "integer"
+          },
+          "display": {
+            "type": "boolean"
+          },
+          "tag_name": {
+            "properties": {
+              "en": {
+                "type": "text"
+              },
+              "ko": {
+                "type": "text"
+              }
+            }
+          }
+        }
+      },
+      "support_features": {
+        "type": "keyword"
+      },
+      "price": {
+        "properties": {
+          "KRW": {
+            "properties": {
+              "price": {
+                "type": "float"
+              },
+              "discount_rate": {
+                "type": "float"
+              }
+            }
+          },
+          "USD": {
+            "properties": {
+              "price": {
+                "type": "float"
+              },
+              "discount_rate": {
+                "type": "float"
+              }
+            }
+          }
+        }
+      },
+      "resources": {
+        "properties": {
+          "ko": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "filetype": {
+                    "type": "keyword"
+                  },
+                  "filename": {
+                    "type": "keyword"
+                  },
+                  "file_id": {
+                    "type": "keyword"
+                  },
+                  "link_cdn": {
+                    "type": "keyword"
+                  },
+                  "filesize": {
+                    "type": "long"
+                  },
+                  "movie_url": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "resource_id": {
+                "type": "keyword"
+              },
+              "sort": {
+                "type": "integer"
+              },
+              "type": {
+                "type": "keyword"
+              }
+            }
+          },
+          "en": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "filetype": {
+                    "type": "keyword"
+                  },
+                  "filename": {
+                    "type": "keyword"
+                  },
+                  "file_id": {
+                    "type": "keyword"
+                  },
+                  "link_cdn": {
+                    "type": "keyword"
+                  },
+                  "filesize": {
+                    "type": "long"
+                  },
+                  "movie_url": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "resource_id": {
+                "type": "keyword"
+              },
+              "sort": {
+                "type": "integer"
+              },
+              "type": {
+                "type": "keyword"
+              }
+            }
+          }
+        }
+      },
+      "image": {
+        "properties": {
+          "ko": {
+            "properties": {
+              "title_square": {
+                "type": "text",
+                "index": false
+              },
+              "title_rectangle": {
+                "type": "text",
+                "index": false
+              }
+            }
+          },
+          "en": {
+            "properties": {
+              "title_square": {
+                "type": "text",
+                "index": false
+              },
+              "title_rectangle": {
+                "type": "text",
+                "index": false
+              }
+            }
+          },
+          "ja": {
+            "properties": {
+              "title_square": {
+                "type": "text",
+                "index": false
+              },
+              "title_rectangle": {
+                "type": "text",
+                "index": false
+              }
+            }
+          },
+          "zh-cn": {
+            "properties": {
+              "title_square": {
+                "type": "text",
+                "index": false
+              },
+              "title_rectangle": {
+                "type": "text",
+                "index": false
+              }
+            }
+          },
+          "zh-tw": {
+            "properties": {
+              "title_square": {
+                "type": "text",
+                "index": false
+              },
+              "title_rectangle": {
+                "type": "text",
+                "index": false
+              }
+            }
+          }
+        }
+      },
+      "features": {
+        "properties": {
+          "product_type": {
+            "type": "float",
+            "fields": {
+              "rank_feature": {
+                "type": "rank_feature"
+              }
+            }
+          },
+          "release_feature": {
+            "type": "float"
+          }
+        }
+      },
+      "product_count": {
+        "type": "integer"
+      },
+      "game_no": {
+        "type": "integer"
+      },
+      "game_id": {
+        "type": "keyword"
+      }
+    }
+  }
+}
