@@ -2,12 +2,13 @@ from __future__ import annotations
 from typing import Sequence
 from bs4 import BeautifulSoup
 
-from app.domain.ports import ParsePort
-from app.domain.models import ParsedDocument, ParsedBlock, RawDocument
+from api_server.app.domain.ports import ParsePort
+from api_server.app.domain.models import ParsedDocument, ParsedBlock, RawDocument
 
-class Bs4ArticleParser(ParsePort):
+class Bs4Parser(ParsePort):
     """HTML에서 제목/문단을 뽑아 ParsedDocument로 변환."""
     def parse(self, raw: RawDocument) -> ParsedDocument:
+        print(raw)
         html = raw.body_text or ""
         soup = BeautifulSoup(html, "lxml")
 

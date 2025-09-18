@@ -1,6 +1,6 @@
 import time, uuid, logging
 from starlette.middleware.base import BaseHTTPMiddleware
-from app.core.logging import request_id_ctx
+from api_server.app.platform.logging import request_id_ctx
 
 access_logger = logging.getLogger("uvicorn.access")
 
@@ -13,7 +13,8 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
         finally:
             ms = (time.perf_counter() - start) * 1000
-            access_logger.info("%s %s %s %.2fms", request.method, request.url.path, getattr(response, "status_code", 500), ms)
+            #access_logger.info("%s %s %s %.2fms", request.method, request.url.path, getattr(response, "status_code", 500), ms)
+            access_logger.info("%s %s %.2fms", request.method, request.url.path, ms)
             request_id_ctx.reset(token)
         response.headers["X-Request-ID"] = rid
         return response

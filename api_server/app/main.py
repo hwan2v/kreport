@@ -4,11 +4,11 @@ from urllib.parse import urlparse
 
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
-from app.api.routers import health, search, extract, transform, load
-from app.platform.config import settings
-from app.platform.logging import setup_logging
-from app.platform.errors import http_exception_handler, validation_exception_handler, unhandled_exception_handler
-from app.middlewares.request_context import RequestContextMiddleware
+from api_server.app.api.routers import health, search, extract, transform, load
+from api_server.app.platform.config import settings
+from api_server.app.platform.logging import setup_logging
+from api_server.app.platform.errors import http_exception_handler, validation_exception_handler, unhandled_exception_handler
+from api_server.app.middlewares.request_context import RequestContextMiddleware
 from opensearchpy import OpenSearch
 
 
@@ -46,5 +46,5 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, unhandled_exception_handler)
 
 # 요청 컨텍스트/액세스 로그 미들웨어
-app.add_middleware(RequestContextMiddleware)
+#app.add_middleware(RequestContextMiddleware)
 

@@ -6,15 +6,15 @@ from urllib.parse import urlparse
 from fastapi import Depends, Request
 from opensearchpy import OpenSearch
 
-from app.domain.ports import FetchPort, ParsePort, TransformPort, IndexPort
-from app.domain.services.extract_service import ExtractService
+from api_server.app.domain.ports import FetchPort, ParsePort, TransformPort, IndexPort
+from api_server.app.domain.services.extract_service import ExtractService
 
-from app.adapters.fetchers.http_fetcher import HttpFetcher
-from app.adapters.parsers.bs4_parser import Bs4ArticleParser
-from app.adapters.transformers.simple_transformer import SimpleTransformer
-from app.adapters.indexers.opensearch_indexer import OpenSearchIndexer
+from api_server.app.adapters.fetchers.file_fetcher import FileFetcher
+from api_server.app.adapters.parsers.bs4_parser import Bs4Parser
+from api_server.app.adapters.transformers.simple_transformer import SimpleTransformer
+from api_server.app.adapters.indexers.opensearch_indexer import OpenSearchIndexer
 
-from app.platform.config import settings
+from api_server.app.platform.config import settings
 
 
 # ---- 클라이언트 ----
@@ -36,10 +36,10 @@ def get_opensearch(request: Request) -> OpenSearch:
 
 # ---- 어댑터(구현) ----
 def get_fetcher() -> FetchPort:
-    return HttpFetcher(timeout=10.0)
+    return FileFetcher()
 
 def get_parser() -> ParsePort:
-    return Bs4ArticleParser()
+    return Bs4Parser()
 
 def get_transformer() -> TransformPort:
     # 필요시 settings에서 파라미터 받기
@@ -53,7 +53,5 @@ def get_indexer(os: OpenSearch = Depends(get_opensearch)) -> IndexPort:
 def get_extract_service(
     fetcher: FetchPort = Depends(get_fetcher),
     parser: ParsePort = Depends(get_parser),
-    transformer: TransformPort = Depends(get_transformer),
-    indexer: IndexPort = Depends(get_indexer),
 ) -> ExtractService:
-    return ExtractService(fetcher, parser, transformer, indexer)
+    return ExtractService(fetcher, parser)

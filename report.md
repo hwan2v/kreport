@@ -131,6 +131,13 @@ false로 “정답 포함 여부” 셀에 작성되도록 합니다.
 -> 데이터 추출 API(day_3) -> 데이터 변환 API(day_3) -> 데이터 적재 API(day_3) 
 -> 데이터 검색 API -> 최종 결과 저장
 
+
+## todo
+목: 데이터 읽고, 추출하고, 변환한뒤, 적재하고 -> 검색하는것까지하자.
+금: 구조 정리, 테스트 코드 추가
+토: 품질, 성능 추가
+
+
 # 아이디어
 ### 파싱
 html 파싱은 무엇으로하지? 어떤 것을 넣어야 검색이 잘되는걸가?
@@ -140,6 +147,18 @@ tsv는 제목, 답변, 날짜, 게시자 있음.
 색인을 api로만 받나? docker-compose에서 worker(celery)를 통해 주기적으로 호출하면 안돼?
 배치?
 색인이 일별로 있다는 것은 증분색인을 어떻게 할것인지를 보고 싶은것인가?
+source_id : keyword
+source_path : text
+file_type : keyword
+seq: integer
+title : text
+body : text
+title_embedding: list
+body_embedding: list
+created_date : datetime
+updated_date : datetime
+author : keyword
+is_open : boolean
 
   
 ### 확장성

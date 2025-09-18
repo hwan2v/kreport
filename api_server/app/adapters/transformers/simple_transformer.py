@@ -4,8 +4,8 @@ import hashlib
 import re
 from typing import Iterable
 
-from app.domain.ports import TransformPort
-from app.domain.models import ParsedDocument, NormalizedChunk
+from api_server.app.domain.ports import TransformPort
+from api_server.app.domain.models import ParsedDocument, NormalizedChunk
 
 
 def _stable_doc_id(uri: str) -> str:

@@ -1,0 +1,89 @@
+{
+    "settings": {
+      "number_of_shards": 1,
+      "refresh_interval": "1s",
+      "index.knn": true,
+      "analysis": {
+        "analyzer": {
+          "ko_nori": {
+            "type": "custom",
+            "tokenizer": "nori_tokenizer",
+            "filter": ["lowercase", "nori_readingform", "nori_part_of_speech"]
+          }
+        },
+        "normalizer": {
+          "lower_norm": {
+            "type": "custom",
+            "filter": ["lowercase", "asciifolding"]
+          }
+        }
+      }
+    },
+    "mappings": {
+      "dynamic": false,
+      "properties": {
+        "source_id": {
+          "type": "keyword",
+          "normalizer": "lower_norm"
+        },
+        "source_path": {
+          "type": "text",
+          "analyzer": "ko_nori",
+          "fields": {
+            "keyword": { "type": "keyword", "ignore_above": 512 }
+          }
+        },
+        "file_type": {
+          "type": "keyword"
+        },
+        "seq": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "text",
+          "analyzer": "ko_nori",
+          "fields": {
+            "keyword": { "type": "keyword", "ignore_above": 512 }
+          }
+        },
+        "title_embedding": {
+            "type": "knn_vector",
+            "dimension": 384,
+            "method": {
+                "name": "hnsw",
+                "space_type": "cosinesimil",
+                "engine": "nmslib"
+            }
+        },
+        "body": {
+          "type": "text",
+          "analyzer": "ko_nori"
+        },
+        "body_embedding": {
+          "type": "knn_vector",
+          "dimension": 384,
+          "method": {
+            "name": "hnsw",
+            "space_type": "cosinesimil",
+            "engine": "nmslib"
+          }
+        },
+        "created_date": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "updated_date": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "author": {
+          "type": "keyword",
+          "normalizer": "lower_norm"
+        },
+        "is_open": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+  

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
-from app.models.schemas import SearchRequest, SearchResponse, SearchHit
-from app.core.config import settings
-from app.services.opensearch_client import get_client
-from app.security.guards import require_api_key
+from api_server.app.models.schemas import SearchRequest, SearchResponse, SearchHit
+from api_server.app.platform.config import settings
+from api_server.app.domain.services.opensearch_client import get_client
+from api_server.app.security.guards import require_api_key
 
 router = APIRouter(prefix="/search", tags=["search"], dependencies=[Depends(require_api_key)])
 

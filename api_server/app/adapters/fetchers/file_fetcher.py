@@ -9,8 +9,8 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from app.domain.ports import FetchPort
-from app.domain.models import RawDocument, SourceRef, ContentType
+from api_server.app.domain.ports import FetchPort
+from api_server.app.domain.models import RawDocument, SourceRef, ContentType
 
 
 def _ext_to_content_type(path: Path) -> ContentType:
@@ -38,6 +38,7 @@ class FileFetcher(FetchPort):
             path_str = uri.replace("file://", "", 1)
 
         path = Path(path_str).expanduser().resolve()
+        print(path)
         body_bytes = path.read_bytes()
 
         # 간단한 인코딩 추정: 실패시 기본 인코딩 사용

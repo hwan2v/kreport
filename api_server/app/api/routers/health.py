@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
-from app.security.guards import require_api_key
+from api_server.app.security.guards import require_api_key
 
-router = APIRouter(prefix="/health", tags=["health"], dependencies=[Depends(require_api_key)])
+router = APIRouter(prefix="/health", tags=["health"])
 
 @router.get("")
 def health():

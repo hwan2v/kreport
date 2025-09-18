@@ -1,5 +1,5 @@
 from opensearchpy import OpenSearch
-from app.core.config import settings
+from api_server.app.platform.config import settings
 
 _client: OpenSearch | None = None
 
