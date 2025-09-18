@@ -211,7 +211,7 @@ app/
 │  ├─ models.py              # Collection/Document 엔티티
 │  ├─ ports.py               # FetchPort/ParserPort/CollectionRepoPort
 │  └─ services/
-│     └─ extract_service.py  # ExtractService (유스케이스 오케스트레이션)
+│     └─ search_service.py   # SearchService (유스케이스 오케스트레이션)
 ├─ infra/
 │  ├─ fetchers/
 │  │  └─ http_fetcher.py     # URL에서 HTML 가져오기

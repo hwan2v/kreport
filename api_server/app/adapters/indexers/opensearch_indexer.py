@@ -56,13 +56,23 @@ class OpenSearchIndexer(IndexPort):
         self.client.indices.put_alias(index=index_name, name=alias_name)
         print(f"Alias '{alias_name}' created successfully.")
 
-    def index(self, chunks: Iterable[NormalizedChunk]) -> IndexResult:
+    def index(self, resource_file_path: str) -> None:
+        with open(resource_file_path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+        chunks: List[NormalizedChunk] = []
+        for item in payload:
+            chunks.append(NormalizedChunk.model_validate(item))
+        self._index(chunks)
+        return
+
+    def _index(self, chunks: Iterable[NormalizedChunk]) -> IndexResult:
         # Pydantic v2 → JSON 호환 dict
         def actions():
             for c in chunks:
                 yield {
                     "_op_type": "index",
                     "_index": self.index,
+                    "_id": c.source_id,
                     "_source": c.model_dump(mode="json"),
                 }
 

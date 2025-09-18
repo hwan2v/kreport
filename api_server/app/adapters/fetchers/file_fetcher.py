@@ -1,6 +1,6 @@
 """
 file:// 경로나 로컬 경로에서 텍스트 파일을 읽는 FetchPort 구현체.
-HTML/MD/TXT 등 확장자로 ContentType을 추정한다.
+HTML/MD/TXT 등 확장자로 FileType을을 추정한다.
 """
 
 from __future__ import annotations
@@ -10,16 +10,18 @@ from pathlib import Path
 from typing import Optional
 
 from api_server.app.domain.ports import FetchPort
-from api_server.app.domain.models import RawDocument, SourceRef, ContentType
+from api_server.app.domain.models import RawDocument, SourceRef, FileType
 
 
-def _ext_to_content_type(path: Path) -> ContentType:
+def _ext_to_file_type(path: Path) -> FileType:
     ext = path.suffix.lower()
     if ext in {".html", ".htm"}:
-        return ContentType.html
+        return FileType.html
     if ext in {".md", ".markdown"}:
-        return ContentType.markdown
-    return ContentType.plain
+        return FileType.markdown
+    if ext in {".tsv"}:
+        return FileType.tsv
+    return FileType.plain
 
 
 class FileFetcher(FetchPort):
@@ -37,8 +39,9 @@ class FileFetcher(FetchPort):
         if uri.startswith("file://"):
             path_str = uri.replace("file://", "", 1)
 
+        print("test1")
+        print(path_str)
         path = Path(path_str).expanduser().resolve()
-        print(path)
         body_bytes = path.read_bytes()
 
         # 간단한 인코딩 추정: 실패시 기본 인코딩 사용
@@ -51,12 +54,11 @@ class FileFetcher(FetchPort):
 
         src = SourceRef(
             uri=uri,
-            content_type=_ext_to_content_type(path),
+            file_type=_ext_to_file_type(path),
             headers=None,
         )
         return RawDocument(
             source=src,
             body_text=body_text,
-            body_bytes=body_bytes,
             encoding=encoding,
         )

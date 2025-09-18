@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
-from api_server.app.api.routers import health, search, extract, transform, load
+from api_server.app.api.routers import health, search, extract, transform, index
 from api_server.app.platform.config import settings
 from api_server.app.platform.logging import setup_logging
 from api_server.app.platform.errors import http_exception_handler, validation_exception_handler, unhandled_exception_handler
@@ -37,7 +37,7 @@ app = FastAPI(title="KReport API", lifespan=lifespan)
 app.include_router(health.router)
 app.include_router(extract.router, prefix="/api")
 app.include_router(transform.router, prefix="/api")
-app.include_router(load.router, prefix="/api")
+app.include_router(index.router, prefix="/api")
 app.include_router(search.router, prefix="/api")
 
 # NestJS의 Global Exception Filter와 동일한 역할

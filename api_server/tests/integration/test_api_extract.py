@@ -2,12 +2,12 @@
 from fastapi.testclient import TestClient
 from api_server.app.main import app
 from api_server.app.api import deps
-from api_server.app.domain.services.extract_service import ExtractService
+from api_server.app.domain.services.search_service import SearchService
 
 class FakeFetch:  # FetchPort
     def fetch(self, uri: str):
-        from api_server.app.domain.models import RawDocument, SourceRef, ContentType
-        return RawDocument(source=SourceRef(uri=uri, content_type=ContentType.html), body_text="<p>hello</p>")
+        from api_server.app.domain.models import RawDocument, SourceRef, FileType
+        return RawDocument(source=SourceRef(uri=uri, file_type=FileType.html), body_text="<p>hello</p>")
 
 class FakeParse:  # ParsePort
     def parse(self, raw):
@@ -24,11 +24,11 @@ class FakeIndexer:  # IndexPort
         from api_server.app.domain.models import IndexResult
         return IndexResult(indexed=len(list(chunks)), errors=[])
 
-def override_extract_service():
-    return ExtractService(FakeFetch(), FakeParse(), FakeXform(), FakeIndexer())
+def override_search_service():
+    return SearchService(FakeFetch(), FakeParse(), FakeXform(), FakeIndexer())
 
 def test_extract_ok():
-    app.dependency_overrides[deps.get_extract_service] = override_extract_service
+    app.dependency_overrides[deps.get_search_service] = override_search_service
 
     client = TestClient(app)
     r = client.post("/api/extract", json={"source":"https://ex", "collection":"news"})

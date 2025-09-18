@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 from typing import Protocol, Iterable
+from datetime import datetime, timedelta
 from .models import (
     RawDocument,
     ParsedDocument,
@@ -50,8 +51,7 @@ class TransformPort(Protocol):
     - 텍스트 정제(공백/HTML 제거 등)
     - (옵션) 언어 감지, 토큰 카운트, 임베딩 생성 등
     """
-
-    def to_chunks(self, doc: ParsedDocument, collection: str) -> Iterable[NormalizedChunk]:
+    def to_chunks(self, doc: ParsedDocument) -> Iterable[NormalizedChunk]:
         """
         Returns:
             Iterable[NormalizedChunk]: OpenSearch 적재 가능한 청크 스트림
