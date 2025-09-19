@@ -50,6 +50,7 @@ class HtmlTransformer(TransformPort):
 
     def to_chunks(self, docs: List[ParsedDocument]) -> Iterable[NormalizedChunk]:
         result = []
+        num = 0
         for doc in docs:
             # 1) 본문 조립
             paragraphs: list[str] = [b.text for b in doc.blocks if b.text]
@@ -62,7 +63,8 @@ class HtmlTransformer(TransformPort):
             is_open = self.default_is_open
             file_type = "html"
             source_path = doc.source.uri  # 원본 URL
-            source_id = self.default_source_id
+            source_id = f"{self.default_source_id}_{num}"
+            num += 1
 
             # 3) NormalizedChunk 생성 (한 건)
             chunk = NormalizedChunk(

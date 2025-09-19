@@ -14,5 +14,5 @@ class IndexRequest(BaseModel):
 @router.post("", summary="문서 인덱싱")
 def index(req: IndexRequest, resolver: PipelineResolver = Depends(get_pipeline_resolver)):
     svc = resolver.for_type(req.source)
-    result = svc.run_index(source=req.source, date=req.date)
-    return {"success": True, "message": "문서 인덱싱 성공"}
+    result = svc.index(source=req.source, date=req.date)
+    return {"success": True, "message": "문서 인덱싱 성공", "data": result}

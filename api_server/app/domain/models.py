@@ -4,7 +4,6 @@
 - RawDocument: 페치된 원문(HTML/텍스트/마크다운 등)
 - ParsedDocument/ParsedBlock: 파서가 구조화한 결과
 - NormalizedChunk: 인덱싱 단위(컬렉션에 적재될 “정규화된 청크”)
-- Collection: 청크들의 묶음(논리적 컬렉션)
 - IndexResult: 인덱싱 결과 요약
 
 Pydantic v2 기반 모델이라 검증/직렬화가 용이합니다.
@@ -20,14 +19,15 @@ from pydantic import BaseModel, Field, HttpUrl
 
 JSONDict = dict[str, Any]
 
+class Collection(str, Enum):
+    wiki = "wiki"
+    qna = "qna"
 
 class FileType(str, Enum):
     """원문 콘텐츠 타입."""
     html = "html"
-    markdown = "markdown"
-    plain = "plain"
     tsv = "tsv"
-
+    plain = "plain"
 
 class SourceRef(BaseModel):
     """원본 리소스 식별자/메타데이터."""
@@ -48,6 +48,7 @@ class RawDocument(BaseModel):
     )
     encoding: str | None = Field(None, description="디코딩에 사용한 문자셋")
     fetched_at: datetime = Field(default_factory=datetime.utcnow)
+    collection: Collection | None = Field(None, description="컬렉션 이름")
 
 
 class ParsedBlock(BaseModel):
@@ -56,7 +57,7 @@ class ParsedBlock(BaseModel):
         "paragraph", description="블록 유형"
     )
     text: str | None = Field(None, description="텍스트 콘텐츠(이미지 등은 None)")
-    meta: JSONDict = Field(default_factory=dict, description="태그/속성 등 부가 정보")
+    meta: JSONDict = Field(default_factory=dict, description="태그/속성 등 부가 정보")   
 
 
 class ParsedDocument(BaseModel):
@@ -66,6 +67,7 @@ class ParsedDocument(BaseModel):
     blocks: list[ParsedBlock] = Field(default_factory=list)
     lang: str | None = Field(None, description="BCP-47 (예: ko, en-US)")
     meta: JSONDict = Field(default_factory=dict, description="추출 시점의 부가 메타")
+    collection: Collection | None = Field(None, description="컬렉션 이름")
 
 
 class NormalizedChunk(BaseModel):
@@ -88,6 +90,7 @@ class NormalizedChunk(BaseModel):
     source_id: str = Field(..., description="원본(수집원) 식별자")
     source_path: str = Field(..., description="원본 경로(URL/파일 경로 등)")
     file_type: str = Field(..., description="원본 유형(e.g. html, pdf, tsv, md)")
+    collection: str = Field(..., description="컬렉션 이름")
 
     # ---- 내용 ----
     title: str | None = Field(None, description="문서 제목")
@@ -126,12 +129,6 @@ class NormalizedChunk2(BaseModel):
     embedding: list[float] | None = Field(
         default=None, description="벡터 검색을 쓸 때만 채움"
     )
-
-
-class Collection(BaseModel):
-    """인덱싱할 청크들의 묶음."""
-    name: str = Field(..., description="컬렉션 이름")
-    items: list[NormalizedChunk] = Field(default_factory=list)
 
 
 class IndexErrorItem(BaseModel):

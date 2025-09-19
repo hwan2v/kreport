@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import Protocol, Iterable
+from typing import Protocol, Iterable, List
 from datetime import datetime, timedelta
 from .models import (
     RawDocument,
@@ -17,11 +17,19 @@ from .models import (
     IndexResult,
 )
 
+class ListenPort(Protocol):
+    """원문을 가져온다(HTTP, 파일, S3 등)."""
+    def listen(self, source: str, date: str) -> List[str]:
+        """
+        Returns:
+            List[str]: 파일 경로 목록
+        """
+        ...
 
 class FetchPort(Protocol):
     """원본으로부터 문서를 가져온다(HTTP, 파일, S3 등)."""
 
-    def fetch(self, uri: str) -> RawDocument:
+    def fetch(self, uri: str, collection: Collection) -> RawDocument:
         """
         Args:
             uri: 'https://...', 'file:///...', 's3://bucket/key' 등
@@ -72,13 +80,13 @@ class IndexPort(Protocol):
         """
         ...
 
-
-class CollectionRepoPort(Protocol):
+class SearcherPort(Protocol):
     """
-    (선택) 컬렉션 단위의 메타/스냅샷을 관리하고 싶을 때 사용.
-    단순히 OpenSearch에만 넣을 거라면 생략 가능.
+    검색을 수행합니다.
     """
-
-    def put(self, col: Collection) -> str:
-        """컬렉션 메타를 저장하고 식별자(이름/ID)를 반환."""
+    def search(self, query: str, size: int = 3) -> [NormalizedChunk]:
+        """
+        Returns:
+            [NormalizedChunk]: 검색 결과
+        """
         ...

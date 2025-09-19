@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from api_server.app.domain.ports import ParsePort
 from api_server.app.domain.models import ParsedDocument, ParsedBlock, RawDocument
 
-class Bs4Parser(ParsePort):
+class HtmlParser(ParsePort):
     """HTML에서 제목/문단/리스트/헤딩을 뽑아 ParsedDocument로 변환."""
 
     # 위키, 블로그 등에서 본문 외 요소 제거용 셀렉터
@@ -70,4 +70,5 @@ class Bs4Parser(ParsePort):
             blocks=blocks,
             lang=lang,
             meta={"block_count": len(blocks)},
+            collection=raw.collection
         )

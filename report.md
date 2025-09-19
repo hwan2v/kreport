@@ -133,9 +133,9 @@ false로 “정답 포함 여부” 셀에 작성되도록 합니다.
 
 
 ## todo
-목: 데이터 읽고, 추출하고, 변환한뒤, 적재하고 -> 검색하는것까지하자.
-금: 구조 정리, 테스트 코드 추가
-토: 품질, 성능 추가
+금: 폴더 구조 정리, 색인 구조 변경, 테스트 코드 추가
+토: 품질, 성능 추가, 셀러리 구조도 생각해보기(임베딩)
+일: 기타 보완, 문서 작성
 
 
 # 아이디어
@@ -209,7 +209,7 @@ app/
 │  └─ deps.py                # 의존성 조립 (DI)
 ├─ domain/
 │  ├─ models.py              # Collection/Document 엔티티
-│  ├─ ports.py               # FetchPort/ParserPort/CollectionRepoPort
+│  ├─ ports.py               # FetchPort/ParserPort
 │  └─ services/
 │     └─ search_service.py   # SearchService (유스케이스 오케스트레이션)
 ├─ infra/

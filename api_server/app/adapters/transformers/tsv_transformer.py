@@ -51,7 +51,8 @@ class TsvTransformer(TransformPort):
                     continue
                 row = b.meta  # Dict[str, str]
                 # 매핑 규칙
-                source_id   = row.get("source_id") or self.default_source_id
+                id = row.get('id')
+                source_id   = f"{self.default_source_id}_{id}"
                 source_path = uri
                 file_type   = doc.source.file_type
                 title       = row.get("question") or None

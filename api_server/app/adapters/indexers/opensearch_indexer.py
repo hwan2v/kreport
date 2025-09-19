@@ -8,8 +8,8 @@ from api_server.app.domain.models import NormalizedChunk, IndexResult, IndexErro
 
 class OpenSearchIndexer(IndexPort):
     """NormalizedChunk들을 OpenSearch에 bulk 적재하는 어댑터."""
-    def __init__(self, client: OpenSearch, index: str) -> None:
-        self.client, self.index = client, index
+    def __init__(self, client: OpenSearch) -> None:
+        self.client = client
         self._load_index_schema()
         
     def _load_index_schema(self) -> None:
@@ -19,23 +19,23 @@ class OpenSearchIndexer(IndexPort):
             self.index_schema = json.load(f)
             print(self.index_schema)
     
-    @staticmethod
-    def create_index_name(alias_name: str, index_date: str) -> str:
+    def create_index_name(self, alias_name: str, index_date: str) -> str:
+        #date_str = (datetime.now() - timedelta(days=int(index_date))).strftime("%Y.%m.%d")
         return f"{alias_name}-{index_date}"
     
-    @staticmethod
-    def get_alias_name(index_name: str) -> str:
+    def get_alias_name(self, index_name: str) -> str:
         return index_name.split("-")[0]
     
     def create_index(self, alias_name: str, index_date: str) -> None:
         """Create index using the loaded schema."""
-        index_name = OpenSearchIndexer.create_index_name(alias_name, index_date)
+        index_name = self.create_index_name(alias_name, index_date)
         if self.client.indices.exists(index=index_name):
             print(f"Index '{index_name}' already exists.")
-            return
+            return index_name
         
         self.client.indices.create(index=index_name, body=self.index_schema)
         print(f"Index '{index_name}' created successfully.")
+        return index_name
     
     def delete_alias(self, alias_name: str) -> None:
         """Delete existing alias."""
@@ -48,30 +48,31 @@ class OpenSearchIndexer(IndexPort):
     
     def alias_index(self, alias_name: str, index_date: str) -> None:
         """Alias index using the loaded schema."""
-        index_name = OpenSearchIndexer.create_index_name(alias_name, index_date)
+        index_name = self.create_index_name(alias_name, index_date)
         if self.client.indices.exists_alias(name=alias_name):
             print(f"Alias '{alias_name}' already exists.")
             self.delete_alias(alias_name)
         
         self.client.indices.put_alias(index=index_name, name=alias_name)
         print(f"Alias '{alias_name}' created successfully.")
+        return alias_name
 
-    def index(self, resource_file_path: str) -> None:
-        with open(resource_file_path, "r", encoding="utf-8") as f:
-            payload = json.load(f)
+    def index(self, index_name: str, resource_file_path: str) -> None:
         chunks: List[NormalizedChunk] = []
-        for item in payload:
-            chunks.append(NormalizedChunk.model_validate(item))
-        self._index(chunks)
-        return
+        with open(resource_file_path, "r", encoding="utf-8") as f:
+            for line in f:
+                doc = json.loads(line.strip())
+                chunks.append(NormalizedChunk.model_validate(doc))
 
-    def _index(self, chunks: Iterable[NormalizedChunk]) -> IndexResult:
+        return self._index(index_name, chunks)
+
+    def _index(self, index_name: str, chunks: Iterable[NormalizedChunk]) -> IndexResult:
         # Pydantic v2 → JSON 호환 dict
         def actions():
             for c in chunks:
                 yield {
                     "_op_type": "index",
-                    "_index": self.index,
+                    "_index": index_name,
                     "_id": c.source_id,
                     "_source": c.model_dump(mode="json"),
                 }
@@ -80,7 +81,8 @@ class OpenSearchIndexer(IndexPort):
         err_items: list[IndexErrorItem] = []
         for e in errors or []:
             # 에러 구조가 다양해서 안전하게 문자열화
-            err_items.append(IndexErrorItem(doc_id=str(e.get("index", {}).get("_id", "")),
-                                            seq=0,  # 필요시 source에 seq를 넣고 꺼내서 기록
-                                            reason=str(e)))
+            err_items.append(IndexErrorItem(
+                doc_id=str(e.get("index", {}).get("_id", "")),
+                seq=0,  # 필요시 source에 seq를 넣고 꺼내서 기록
+                reason=str(e)))
         return IndexResult(indexed=ok, errors=err_items)

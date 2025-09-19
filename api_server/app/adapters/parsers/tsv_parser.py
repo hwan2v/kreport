@@ -33,5 +33,6 @@ class TsvParser(ParsePort):
             title=None,
             blocks=blocks,
             lang=None,
-            meta={"rows": len(blocks), "columns": list(cols)}
+            meta={"rows": len(blocks), "columns": list(cols)},
+            collection=raw.collection
         )

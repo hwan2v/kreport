@@ -2,11 +2,11 @@ from pydantic_settings import BaseSettings
 from pydantic import Field
 
 class Settings(BaseSettings):
-    APP_NAME: str = "os-report-api"
+    APP_NAME: str = "k-report-api"
     DEBUG: bool = False
 
     OPENSEARCH_HOST: str = Field("http://localhost:9200", description="http://host:port")
-    OPENSEARCH_INDEX: str = "my-index"
+    OPENSEARCH_INDEX: str = "tsv"
 
     # 리포트 저장소(로컬 파일/MinIO/S3 중 선택)
     STORAGE_BACKEND: str = Field("local", description="local|s3")

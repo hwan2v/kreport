@@ -13,8 +13,8 @@ from api_server.app.domain.ports import FetchPort
 from api_server.app.domain.models import RawDocument, SourceRef, FileType, Collection
 from api_server.app.domain.utils import ext_to_file_type
 
-class FileFetcher(FetchPort):
-    """로컬 파일에서 문서를 읽어오는 구현체."""
+class HtmlFetcher(FetchPort):
+    """HTML 파일에서 문서를 읽어오는 구현체."""
 
     def __init__(self, default_encoding: str = "utf-8") -> None:
         self.default_encoding = default_encoding

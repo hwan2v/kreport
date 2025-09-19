@@ -6,17 +6,17 @@ from urllib.parse import urlparse
 from fastapi import Depends, Request
 from opensearchpy import OpenSearch
 
-from api_server.app.domain.ports import FetchPort, ParsePort, TransformPort, IndexPort
+from api_server.app.domain.ports import FetchPort, ParsePort, TransformPort, IndexPort, SearcherPort, ListenPort
+from api_server.app.adapters.listeners.file_listener import FileListener
 from api_server.app.domain.services.search_service import SearchService
-
+from api_server.app.adapters.fetchers.html_fetcher import HtmlFetcher
 from api_server.app.adapters.fetchers.file_fetcher import FileFetcher
-from api_server.app.adapters.parsers.bs4_parser import Bs4Parser
+from api_server.app.adapters.parsers.html_parser import HtmlParser
 from api_server.app.adapters.parsers.tsv_parser import TsvParser
 from api_server.app.adapters.transformers.html_transformer import HtmlTransformer
 from api_server.app.adapters.transformers.tsv_transformer import TsvTransformer
-from api_server.app.adapters.transformers.simple_transformer import SimpleTransformer
 from api_server.app.adapters.indexers.opensearch_indexer import OpenSearchIndexer
-
+from api_server.app.adapters.searchers.opensearch_searcher import OpenSearchSearcher
 from api_server.app.platform.config import settings
 
 
@@ -42,45 +42,39 @@ def get_fetcher() -> FetchPort:
     return FileFetcher()
 
 def get_parser() -> ParsePort:
-    return Bs4Parser()
-
-def get_transformer() -> TransformPort:
-    # 필요시 settings에서 파라미터 받기
-    return SimpleTransformer(max_chars=1200, overlap_chars=120)
+    return HtmlParser()
 
 def get_indexer(os: OpenSearch = Depends(get_opensearch)) -> IndexPort:
-    return OpenSearchIndexer(os, settings.OPENSEARCH_INDEX)
-
+    return OpenSearchIndexer(os)
 
 class PipelineResolver:
     """source_type에 맞는 SearchService 조립기."""
     def __init__(self, os: OpenSearch) -> None:
-        self._indexer: IndexPort = OpenSearchIndexer(os, settings.OPENSEARCH_INDEX)
+        self._indexer: IndexPort = OpenSearchIndexer(os)
+        self._searcher: SearcherPort = OpenSearchSearcher(os, settings.OPENSEARCH_INDEX)
 
     def for_type(self, source_type: str) -> SearchService:
-        # 공통 fetcher (필요하면 tsv에 file_fetcher로 바꾸도록 확장)
-        fetcher: FetchPort = FileFetcher()
-
+        listener: ListenPort = FileListener()
+        
         if source_type == "html":
-            parser: ParsePort = Bs4Parser()
+            fetcher: FetchPort = HtmlFetcher()
+            parser: ParsePort = HtmlParser() 
             transformer: TransformPort = HtmlTransformer(default_source_id="html")
         elif source_type == "tsv":
+            fetcher: FetchPort = FileFetcher()
             parser: ParsePort = TsvParser()
             transformer: TransformPort = TsvTransformer(default_source_id="tsv")
         else:
             raise ValueError(f"unsupported source_type: {source_type}")
 
-        return SearchService(fetcher=fetcher, parser=parser,
-                              transformer=transformer, indexer=self._indexer)
+        return SearchService(
+            listener=listener,
+            fetcher=fetcher, 
+            parser=parser, 
+            transformer=transformer, 
+            indexer=self._indexer,
+            searcher=self._searcher
+        )
 
 def get_pipeline_resolver(os: OpenSearch = Depends(get_opensearch)) -> PipelineResolver:
     return PipelineResolver(os)
-
-# ---- 유스케이스 서비스(오케스트레이션) ----
-def get_search_service(
-    fetcher: FetchPort = Depends(get_fetcher),
-    parser: ParsePort = Depends(get_parser),
-    transformer: TransformPort = Depends(get_transformer),
-    indexer: IndexPort = Depends(get_indexer),
-) -> SearchService:
-    return SearchService(fetcher, parser, transformer, indexer)
