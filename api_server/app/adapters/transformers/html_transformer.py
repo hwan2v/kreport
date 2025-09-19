@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Iterable, List
+import json
 
 from api_server.app.domain.utils import infer_date_from_path
 from api_server.app.domain.ports import TransformPort
@@ -26,29 +27,15 @@ class HtmlTransformer(TransformPort):
         self.default_is_open = default_is_open
         self.joiner = joiner
 
-    def transform(self, resource_file_path: str) -> Iterable[NormalizedChunk]:
-        print(resource_file_path)
-        with open(resource_file_path, "r", encoding="utf-8") as f:
-            payload = json.load(f)
-
+    def read_parsed_document(self, resource_file_path: str) -> Iterable[ParsedDocument]:
         docs: List[ParsedDocument] = []
-        if isinstance(payload, list):
-            for item in payload:
-                docs.append(ParsedDocument.model_validate(item))
-        elif isinstance(payload, dict):
-            # 지원: {"data": [...]} 형태도 허용
-            data = payload.get("data") if "data" in payload else None
-            if isinstance(data, list):
-                for item in data:
-                    docs.append(ParsedDocument.model_validate(item))
-            else:
-                docs.append(ParsedDocument.model_validate(payload))
-        else:
-            raise ValueError("Unsupported JSON format for ParsedDocument deserialization")
+        with open(resource_file_path, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    docs.append(ParsedDocument.model_validate(json.loads(line)))
+        return docs
 
-        return self.to_chunks(docs)
-
-    def to_chunks(self, docs: List[ParsedDocument]) -> Iterable[NormalizedChunk]:
+    def transform(self, docs: List[ParsedDocument]) -> Iterable[NormalizedChunk]:
         result = []
         num = 0
         for doc in docs:
@@ -71,6 +58,7 @@ class HtmlTransformer(TransformPort):
                 source_id=source_id,
                 source_path=source_path,
                 file_type=file_type,
+                collection=doc.collection,
                 title=title,
                 body=body,
                 title_embedding=None,

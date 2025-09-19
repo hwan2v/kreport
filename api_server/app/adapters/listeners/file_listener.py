@@ -18,6 +18,7 @@ class FileListener(ListenPort):
 
     def listen(self, source: str, date: str) -> List[str]:
         resource_dir_path = self._create_resource_dir_path(source, date)
+        print(resource_dir_path)
         return [f'{resource_dir_path}/{filename}' for filename in os.listdir(resource_dir_path)]
     
     def _create_resource_dir_path(self, source: str, date: str) -> str:

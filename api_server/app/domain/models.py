@@ -27,7 +27,6 @@ class FileType(str, Enum):
     """원문 콘텐츠 타입."""
     html = "html"
     tsv = "tsv"
-    plain = "plain"
 
 class SourceRef(BaseModel):
     """원본 리소스 식별자/메타데이터."""

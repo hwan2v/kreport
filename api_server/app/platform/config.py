@@ -6,7 +6,8 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     OPENSEARCH_HOST: str = Field("http://localhost:9200", description="http://host:port")
-    OPENSEARCH_INDEX: str = "tsv"
+    OPENSEARCH_INDEX: str = "collection"
+    OPENSEARCH_ALIAS: str = "kakaobank"
 
     # 리포트 저장소(로컬 파일/MinIO/S3 중 선택)
     STORAGE_BACKEND: str = Field("local", description="local|s3")

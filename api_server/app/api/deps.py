@@ -9,7 +9,6 @@ from opensearchpy import OpenSearch
 from api_server.app.domain.ports import FetchPort, ParsePort, TransformPort, IndexPort, SearcherPort, ListenPort
 from api_server.app.adapters.listeners.file_listener import FileListener
 from api_server.app.domain.services.search_service import SearchService
-from api_server.app.adapters.fetchers.html_fetcher import HtmlFetcher
 from api_server.app.adapters.fetchers.file_fetcher import FileFetcher
 from api_server.app.adapters.parsers.html_parser import HtmlParser
 from api_server.app.adapters.parsers.tsv_parser import TsvParser
@@ -50,18 +49,20 @@ def get_indexer(os: OpenSearch = Depends(get_opensearch)) -> IndexPort:
 class PipelineResolver:
     """source_type에 맞는 SearchService 조립기."""
     def __init__(self, os: OpenSearch) -> None:
-        self._indexer: IndexPort = OpenSearchIndexer(os)
-        self._searcher: SearcherPort = OpenSearchSearcher(os, settings.OPENSEARCH_INDEX)
+        self._indexer: IndexPort = OpenSearchIndexer(
+            os, 
+            settings.OPENSEARCH_INDEX, 
+            settings.OPENSEARCH_ALIAS)
+        self._searcher: SearcherPort = OpenSearchSearcher(os, settings.OPENSEARCH_ALIAS)
 
     def for_type(self, source_type: str) -> SearchService:
         listener: ListenPort = FileListener()
-        
+        fetcher: FetchPort = FileFetcher()
+
         if source_type == "html":
-            fetcher: FetchPort = HtmlFetcher()
             parser: ParsePort = HtmlParser() 
             transformer: TransformPort = HtmlTransformer(default_source_id="html")
         elif source_type == "tsv":
-            fetcher: FetchPort = FileFetcher()
             parser: ParsePort = TsvParser()
             transformer: TransformPort = TsvTransformer(default_source_id="tsv")
         else:

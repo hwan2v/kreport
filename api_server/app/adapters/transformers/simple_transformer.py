@@ -86,7 +86,7 @@ class SimpleTransformer(TransformPort):
         self.max_chars = max_chars
         self.overlap_chars = overlap_chars
 
-    def to_chunks(self, doc: ParsedDocument, collection: str) -> Iterable[NormalizedChunk]:
+    def transform(self, doc: ParsedDocument, collection: str) -> Iterable[NormalizedChunk]:
         uri = doc.source.uri
         doc_id = _stable_doc_id(uri)
         title = doc.title

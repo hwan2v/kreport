@@ -19,13 +19,18 @@ Flow:
 """
 
 from __future__ import annotations
-
+from pydantic import BaseModel
+from pathlib import Path
+import json
 import os
 from typing import Iterable, Sequence, List
+
 import logging
 import traceback
 
-from api_server.app.domain.ports import FetchPort, ParsePort, TransformPort, IndexPort, SearcherPort, ListenPort
+from api_server.app.domain.ports import (
+    FetchPort, ParsePort, TransformPort, IndexPort, SearcherPort, ListenPort
+)
 from api_server.app.domain.models import (
     IndexResult,
     IndexErrorItem,
@@ -81,45 +86,36 @@ class SearchService:
         for resource_file in resource_files:
             raw: RawDocument = self._fetcher.fetch(resource_file, collection)
             parsed: ParsedDocument = self._parser.parse(raw)
-            result.append(parsedDocument)
-        return self._save_parsed_document(collection, date, docs=result)
+            result.append(parsed)
+        return self._save_parsed_document(
+            collection, date, docs=result, suffix="parsed")
 
-    
-    def parse(self, source: str, date: str, collection: Collection) -> [ParsedDocument]:
-        """단일 소스를 처리해 즉시 파싱합니다.
-        """
-        logger.info("service.parse: source=%s date=%s", source, date)
-        file_name = f'{source}_{date}'
-        resource_dir_path = self._create_resource_dir_path(source, date)
-        result = []
-        for filename in os.listdir(resource_dir_path):
-            source_file = f'{resource_dir_path}/{filename}'
-            print(source_file)
-            parsedDocument = self._iter_chunks_for_single(source_file, file_name)
-            result.append(parsedDocument)
-        return self._save_parsed_document(collection, date, docs=result)
-
-    def transform(self, source: str, date: str) -> [NormalizedChunk]:
+    def transform(self, source: str, date: str, collection: Collection) -> [NormalizedChunk]:
         """단일 소스를 처리해 즉시 변환합니다.
         """
         logger.info("service.transform: source=%s date=%s", source, date)
-        collection = f'{source}_{date}'
-        resource_file_path = f'./data/{collection}.json'
-        result = self._transformer.transform(resource_file_path)
-        collection = f'{source}_{date}_normalized'
-        return self._save_parsed_document(collection, date, docs=result)
+        
+        parsed_file_name = self._create_file_name(collection, date, suffix="parsed")
+        parsed_docs: List[ParsedDocument] = self._transformer.read_parsed_document(parsed_file_name)
+        result = self._transformer.transform(parsed_docs)
+        return self._save_parsed_document(
+            collection, date, docs=result, suffix="normalized")
 
-    def index(self, source: str, date: str) -> None:
+    def index(self, source: str, date: str, collection: Collection) -> None:
         """단일 소스를 처리해 즉시 인덱싱합니다.
         """
         logger.info("service.index: source=%s date=%s", source, date)
-        collection = f'{source}_{date}_normalized'
+        
         index_name = self._indexer.create_index(source, date)
-        resource_file_path = f'./data/{source}_{date}_normalized.json'
-        self._indexer.index(index_name, resource_file_path)
-        alias_name = self._indexer.get_alias_name(index_name)
-        self._indexer.alias_index(alias_name, date)
-        return alias_name
+        normalized_file_name = self._create_file_name(collection, date, suffix="normalized")
+        print(normalized_file_name)
+        result = self._indexer.index(index_name, normalized_file_name)
+        print(result)
+        return self._indexer.rotate_alias_to_latest(
+            self._indexer.alias_name, 
+            self._indexer.prefix_index_name, 
+            delete_old=False
+        )
     
     def search(self, query: str, size: int = 3) -> [NormalizedChunk]:
         """검색을 수행합니다.
@@ -132,17 +128,28 @@ class SearchService:
     #================= internal helpers =================
     def _save_parsed_document(
         self, 
-        collection: str, 
+        collection: Collection, 
         date: str, 
         docs: List[BaseModel] = None, 
+        suffix: str = "normalized",
         out_dir: str = "./data"
     ):
         # JSON 직렬화
-        file_name = f"{collection}_{date}.json"
-        out = Path(out_dir) / file_name
+        file_name = self._create_file_name(collection, date, suffix, out_dir)
+        out = Path(file_name)
         out.parent.mkdir(parents=True, exist_ok=True)
         with out.open("w", encoding="utf-8") as f:
             for doc in docs:
                 f.write(json.dumps(doc.model_dump(mode="json"), ensure_ascii=False) + "\n")
         print(f"{file_name} 파일이 생성되었습니다.")
         return out.name
+    
+    def _create_file_name(
+        self, 
+        collection: Collection, 
+        date: str, 
+        suffix: str = "normalized",
+        out_dir: str = "./data"
+    ) -> str:
+        file_name = f"{collection.value}_{date}_{suffix}.json"
+        return f'{out_dir}/{file_name}'

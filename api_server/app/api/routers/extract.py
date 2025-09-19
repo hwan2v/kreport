@@ -19,10 +19,10 @@ def extract(req: ExtractRequest, resolver: PipelineResolver = Depends(get_pipeli
             ft = FileType(filetype)
             collection = choose_collection(ft)
             svc = resolver.for_type(ft)
-            result = svc.extract(source=ft, date=req.date, collection=collection)
+            result = svc.extract(source=ft.value, date=req.date, collection=collection)
     else:
         ft = FileType(req.source)
         collection = choose_collection(ft)
         svc = resolver.for_type(ft)
-        result = svc.extract(source=ft, date=req.date, collection=collection)
+        result = svc.extract(source=ft.value, date=req.date, collection=collection)
     return {"success": True, "message": "문서 추출 후 저장 성공", "data": result}

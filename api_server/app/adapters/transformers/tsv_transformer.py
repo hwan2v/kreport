@@ -18,8 +18,7 @@ class TsvTransformer(TransformPort):
     def __init__(self, default_source_id: str = "tsv"):
         self.default_source_id = default_source_id
 
-    def transform(self, resource_file_path: str) -> Iterable[NormalizedChunk]:
-        print(resource_file_path)
+    def read_parsed_document(self, resource_file_path: str) -> Iterable[ParsedDocument]:
         with open(resource_file_path, "r", encoding="utf-8") as f:
             payload = json.load(f)
 
@@ -28,7 +27,6 @@ class TsvTransformer(TransformPort):
             for item in payload:
                 docs.append(ParsedDocument.model_validate(item))
         elif isinstance(payload, dict):
-            # 지원: {"data": [...]} 형태도 허용
             data = payload.get("data") if "data" in payload else None
             if isinstance(data, list):
                 for item in data:
@@ -37,10 +35,9 @@ class TsvTransformer(TransformPort):
                 docs.append(ParsedDocument.model_validate(payload))
         else:
             raise ValueError("Unsupported JSON format for ParsedDocument deserialization")
+        return docs
 
-        return self.to_chunks(docs)
-
-    def to_chunks(self, docs: List[ParsedDocument]) -> Iterable[NormalizedChunk]:
+    def transform(self, docs: List[ParsedDocument]) -> Iterable[NormalizedChunk]:
         result = []
         for doc in docs:
             print(doc.source.uri)
@@ -64,6 +61,7 @@ class TsvTransformer(TransformPort):
                     source_id=source_id,
                     source_path=source_path,
                     file_type=file_type,
+                    collection=doc.collection,
                     title=title,
                     body=body,
                     title_embedding=None,   # 필요 시 임베딩 생성기로 채우기
