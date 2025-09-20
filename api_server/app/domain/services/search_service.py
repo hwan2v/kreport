@@ -49,7 +49,7 @@ class SearchService:
         self._searcher = searcher
         
     # ---------- public API ----------
-    def search(self, query: str, size: int = 3) -> [NormalizedChunk]:
+    def search(self, query: str, size: int = 3, explain: bool = False) -> [NormalizedChunk]:
         """검색을 수행합니다.
         """
-        return self._searcher.search(query, size)
+        return self._searcher.search(query, size, explain)

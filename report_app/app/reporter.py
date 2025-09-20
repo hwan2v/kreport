@@ -196,9 +196,11 @@ class SearchReport:
         hits = search_result["hits"]["hits"]
         for hit in hits:
             hit_dict = hit["_source"]
-            body = hit_dict["body"].replace("\n", " ")
-            #body = re.sub(r"\s+", " ", hit_dict["body"].replace("\n", "")).strip()
-            result.append(body)
+            contents = []
+            for key in ['title', 'body', 'summary', 'question', 'answer']:
+                if key in hit_dict and hit_dict[key] is not None:
+                    contents.append(hit_dict[key].replace("\n", " "))
+            result.append(" ".join(contents))
         return result
             
     def _build_query(self, question: str, size: int = 3):

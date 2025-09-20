@@ -63,6 +63,7 @@ class TsvTransformer(TransformPort):
                     collection=doc.collection,
                     title=None,
                     body=None,
+                    paragraph=None,
                     summary=None,
                     infobox=None,
                     question=question,

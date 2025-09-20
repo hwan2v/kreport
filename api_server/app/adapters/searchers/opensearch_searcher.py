@@ -12,11 +12,11 @@ class OpenSearchSearcher(SearchPort):
         self.client = client
         self.alias_name = alias_name
 
-    def search(self, query: str, size: int = 3) -> [NormalizedChunk]:
-        body = self._build_query(query, size)
+    def search(self, query: str, size: int = 3, explain: bool = False) -> [NormalizedChunk]:
+        body = self._build_query(query, size=size, explain=explain)
         return self.client.search(index=self.alias_name, body=body)
 
-    def _build_query(self, query: str, size: int = 3, min_score: float = 10) -> Dict[str, Any]:
+    def _build_query(self, query: str, size: int = 3, explain: bool = False, min_score: float = 5) -> Dict[str, Any]:
         """
         title, body 양쪽을 대상으로 keyword 검색 후 상위 N개 반환.
         Args:
@@ -28,6 +28,7 @@ class OpenSearchSearcher(SearchPort):
         body = {
             "from": 0,
             "size": size,
+            "explain": explain,
             "min_score": min_score,
             "query": {
                 "bool": {
@@ -46,7 +47,7 @@ class OpenSearchSearcher(SearchPort):
                         {
                             "multi_match": {
                                 "query": query,
-                                "fields": ["title", "question"],
+                                "fields": ["title", "title.keyword"],
                                 "type": "best_fields",
                                 "operator": "or",
                                 "boost": 4
@@ -55,26 +56,35 @@ class OpenSearchSearcher(SearchPort):
                         {
                             "multi_match": {
                                 "query": query,
-                                "fields": ["summary", "answer"],
+                                "fields": ["question", "answer"],
                                 "type": "best_fields",
                                 "operator": "or",
-                                "boost": 1
+                                "boost": 2.5
                             }
                         },
                         {
                             "match": {
                                 "infobox": {
                                     "query": query,
-                                    "boost": 3
+                                    "boost": 1.5
                                 }
                             }
                         },
                         {
                             "match": {
-                                "summary": {
+                                "paragraph": {
                                     "query": query,
-                                    "boost": 0.5
+                                    "boost": 2
                                 }
+                            }
+                        },
+                        {
+                            "multi_match": {
+                                "query": query,
+                                "fields": ["summary", "infobox"],
+                                "type": "best_fields",
+                                "operator": "or",
+                                "boost": 2
                             }
                         }
                     ]

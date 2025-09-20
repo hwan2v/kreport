@@ -96,6 +96,7 @@ class NormalizedChunk(BaseModel):
     body: str | None = Field(None, description="본문 텍스트(정규화/전처리 후)")
     summary: str | None = Field(None, description="요약 텍스트")
     infobox: str | None = Field(None, description="정보 박스 텍스트")
+    paragraph: str | None = Field(None, description="문단 텍스트")
     question: str | None = Field(None, description="질문 텍스트")
     answer: str | None = Field(None, description="답변 텍스트")
 

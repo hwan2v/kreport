@@ -62,7 +62,8 @@
         },
         "body": {
           "type": "text",
-          "analyzer": "ko_nori"
+          "analyzer": "ko_nori",
+          "search_analyzer": "search_analyzer"
         },
         "body_embedding": {
           "type": "knn_vector",
@@ -78,6 +79,10 @@
           "analyzer": "ko_nori"
         },
         "infobox": {
+          "type": "text",
+          "analyzer": "ko_nori"
+        },
+        "paragraph": {
           "type": "text",
           "analyzer": "ko_nori"
         },
