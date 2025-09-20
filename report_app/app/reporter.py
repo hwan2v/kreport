@@ -12,7 +12,8 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import traceback
 import csv
-from opensearchpy import OpenSearch, helpers
+import httpx
+import asyncio
 
 
 logger = logging.getLogger(__name__)
@@ -109,9 +110,9 @@ class SearchReport:
                 is_contain_answer = "true" if len(parsed_search_results) > 0 and answer in parsed_search_results[0] else "false"
                 true_count += 1 if is_contain_answer == "true" else 0
                 total_search_time += search_time
-                result_1 = parsed_search_results[0] if len(parsed_search_results) > 0 else " "
-                result_2 = parsed_search_results[1] if len(parsed_search_results) > 1 else " "
-                result_3 = parsed_search_results[2] if len(parsed_search_results) > 2 else " "
+                result_1 = parsed_search_results[0] if len(parsed_search_results) > 0 else ""
+                result_2 = parsed_search_results[1] if len(parsed_search_results) > 1 else ""
+                result_3 = parsed_search_results[2] if len(parsed_search_results) > 2 else ""
                 wf.write(f'{no}\t{question}\t{answer}\t{result_1}\t{result_2}\t{result_3}\t{is_contain_answer}\t{search_time}\n')
             average_search_time = total_search_time / len(answer_dict)
             wf.write(f"최종결과\t\t\t\t\t\t{true_count}\t{average_search_time}\n")
@@ -138,6 +139,18 @@ class SearchReport:
             }
         }
         return body
+    
+    async def call_api(self, client: httpx.AsyncClient, url: str, q: str, size: int = 3) -> dict:
+        """단일 호출 + 예외 처리 + 상태코드 체크"""
+        r = await client.post(f"{url}/api/search", json={"query": q, "size": size}, timeout=10)
+        r.raise_for_status()
+        return r.json()
+    
+    async def search_answers_async(self, answer_dict: dict, max_concurrency: int = 20) -> dict:
+        async with httpx.AsyncClient() as client:
+            tasks = [self.call_api(client, self.api_url, obj["question"]) for no, obj in answer_dict.items()]
+            results = await asyncio.gather(*tasks)
+        return results
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -176,6 +189,9 @@ if __name__ == "__main__":
         answer_dict = search_report.init_answer_file()
         # 질문 검색
         search_dict = search_report.search_answers(answer_dict)
+        #search_dict = asyncio.run(
+        #    search_report.search_answers_async(answer_dict, max_concurrency=20)
+        #)
         # 리포트 생성
         search_report.report(answer_dict, search_dict)
         # close session
