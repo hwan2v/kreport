@@ -30,7 +30,7 @@ class OpenSearchSearcher(SearchPort):
             "query": {
                 "multi_match": {
                     "query": query,
-                    "fields": ["title", "body"],
+                    "fields": ["title", "body", "question", "answer"],
                     "type": "best_fields",
                     "operator": "or"
                 }

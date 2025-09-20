@@ -52,24 +52,24 @@ class TsvTransformer(TransformPort):
                 source_id   = f"{self.default_source_id}_{id}"
                 source_path = uri
                 file_type   = doc.source.file_type
-                title       = row.get("question") or None
-                body        = row.get("answer") or ""
+                question       = row.get("question") or None
+                answer        = row.get("answer") or ""
                 author      = row.get("user_id") or None
-                is_open     = (row.get("published") or "").upper().startswith("Y")
+                published     = (row.get("published") or "").upper().startswith("Y")
 
                 chunk = NormalizedChunk(
                     source_id=source_id,
                     source_path=source_path,
                     file_type=file_type,
                     collection=doc.collection,
-                    title=title,
-                    body=body,
+                    question=question,
+                    answer=answer,
                     title_embedding=None,   # 필요 시 임베딩 생성기로 채우기
                     body_embedding=None,    # 필요 시 임베딩 생성기로 채우기
                     created_date=created_date,       # TSV에 날짜가 없으므로 현재 시각 사용(또는 정책에 맞게 변경)
                     updated_date=created_date,
                     author=author,
-                    is_open=is_open,
+                    published=published,
                 )
                 result.append(chunk)
         return result

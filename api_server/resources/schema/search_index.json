@@ -24,17 +24,15 @@
       "properties": {
         "source_id": {
           "type": "keyword",
-          "normalizer": "lower_norm"
+          "index": false
         },
         "source_path": {
           "type": "text",
-          "analyzer": "ko_nori",
-          "fields": {
-            "keyword": { "type": "keyword", "ignore_above": 512 }
-          }
+          "index": false
         },
         "file_type": {
-          "type": "keyword"
+          "type": "keyword",
+          "index": false
         },
         "seq": {
           "type": "integer"
@@ -68,6 +66,20 @@
             "engine": "nmslib"
           }
         },
+        "question": {
+          "type": "text",
+          "analyzer": "ko_nori",
+          "fields": {
+            "keyword": { "type": "keyword", "ignore_above": 512 }
+          }
+        },
+        "answer": {
+          "type": "text",
+          "analyzer": "ko_nori",
+          "fields": {
+            "keyword": { "type": "keyword", "ignore_above": 512 }
+          }
+        },
         "created_date": {
           "type": "date",
           "format": "strict_date_optional_time||epoch_millis"
@@ -78,9 +90,10 @@
         },
         "author": {
           "type": "keyword",
-          "normalizer": "lower_norm"
+          "normalizer": "lower_norm",
+          "index": false
         },
-        "is_open": {
+        "published": {
           "type": "boolean"
         }
       }

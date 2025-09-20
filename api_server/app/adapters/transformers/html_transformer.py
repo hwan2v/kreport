@@ -19,12 +19,12 @@ class HtmlTransformer(TransformPort):
         self,
         default_source_id: str = "html",
         default_author: str | None = None,
-        default_is_open: bool = True,
+        default_published: bool = True,
         joiner: str = " ",
     ) -> None:
         self.default_source_id = default_source_id
         self.default_author = default_author
-        self.default_is_open = default_is_open
+        self.default_published = default_published
         self.joiner = joiner
 
     def read_parsed_document(self, resource_file_path: str) -> Iterable[ParsedDocument]:
@@ -47,7 +47,7 @@ class HtmlTransformer(TransformPort):
             created_date = infer_date_from_path(doc.source.uri)
             title = doc.title
             author = self.default_author
-            is_open = self.default_is_open
+            published = self.default_published
             file_type = "html"
             source_path = doc.source.uri  # 원본 URL
             source_id = f"{self.default_source_id}_{num}"
@@ -66,7 +66,7 @@ class HtmlTransformer(TransformPort):
                 created_date=created_date,
                 updated_date=created_date,
                 author=author,
-                is_open=is_open,
+                published=published,
             )
             result.append(chunk)
         return result

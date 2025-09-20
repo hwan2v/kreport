@@ -82,7 +82,7 @@ class NormalizedChunk(BaseModel):
       - body_embedding: knn_vector
       - created_date/updated_date: date
       - author: keyword
-      - is_open: boolean
+      - published: boolean
     """
 
     # ---- 식별/메타 ----
@@ -107,7 +107,7 @@ class NormalizedChunk(BaseModel):
     created_date: datetime = Field(..., description="문서 생성 시간(원본 기준 또는 파이프라인 정책)")
     updated_date: datetime = Field(..., description="문서 갱신 시간(원본 기준 또는 파이프라인 정책)")
     author: str | None = Field(None, description="작성자(정확 매칭/집계용)")
-    is_open: bool = Field(True, description="공개 여부")
+    published: bool = Field(True, description="공개 여부")
 
 
 class NormalizedChunk2(BaseModel):
