@@ -87,7 +87,7 @@ class IndexPort(Protocol):
         """
         ...
 
-class SearcherPort(Protocol):
+class SearchPort(Protocol):
     """
     검색을 수행합니다.
     """

@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 from fastapi import Depends, Request
 from opensearchpy import OpenSearch
 
-from api_server.app.domain.ports import FetchPort, ParsePort, TransformPort, IndexPort, SearcherPort, ListenPort
+from api_server.app.domain.ports import FetchPort, ParsePort, TransformPort, IndexPort, SearchPort, ListenPort
 from api_server.app.adapters.listeners.file_listener import FileListener
 from api_server.app.domain.services.search_service import SearchService
 from api_server.app.adapters.fetchers.file_fetcher import FileFetcher
@@ -44,7 +44,8 @@ def get_parser() -> ParsePort:
     return HtmlParser()
 
 def get_indexer(os: OpenSearch = Depends(get_opensearch)) -> IndexPort:
-    return OpenSearchIndexer(os)
+    # OpenSearchIndexer expects (client, prefix_index_name, alias_name)
+    return OpenSearchIndexer(os, settings.OPENSEARCH_INDEX, settings.OPENSEARCH_ALIAS)
 
 class PipelineResolver:
     """source_type에 맞는 SearchService 조립기."""
@@ -53,9 +54,9 @@ class PipelineResolver:
             os, 
             settings.OPENSEARCH_INDEX, 
             settings.OPENSEARCH_ALIAS)
-        self._searcher: SearcherPort = OpenSearchSearcher(os, settings.OPENSEARCH_ALIAS)
+        self._searcher: SearchPort = OpenSearchSearcher(os, settings.OPENSEARCH_ALIAS)
 
-    def for_type(self, source_type: str) -> SearchService:
+    def for_type(self, source_type: str) -> IndexService:
         listener: ListenPort = FileListener()
         fetcher: FetchPort = FileFetcher()
 
@@ -68,14 +69,18 @@ class PipelineResolver:
         else:
             raise ValueError(f"unsupported source_type: {source_type}")
 
-        return SearchService(
+        return IndexService(
             listener=listener,
             fetcher=fetcher, 
             parser=parser, 
             transformer=transformer, 
-            indexer=self._indexer,
-            searcher=self._searcher
+            indexer=self._indexer
         )
 
 def get_pipeline_resolver(os: OpenSearch = Depends(get_opensearch)) -> PipelineResolver:
     return PipelineResolver(os)
+
+def get_search_service(os: OpenSearch = Depends(get_opensearch)) -> SearchService:
+    # Wire SearchService with OpenSearchSearcher, not the raw OpenSearch client
+    searcher: SearchPort = OpenSearchSearcher(os, settings.OPENSEARCH_ALIAS)
+    return SearchService(searcher)
