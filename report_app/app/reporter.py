@@ -75,7 +75,7 @@ class SearchReport:
     def report(self, answer_dict: dict, search_dict: dict, output_file_path: str = None):
         true_count = 0
         total_search_time = 0
-        report_file_path = output_file_path if output_file_path else self.answer_file.replace('.tsv', '_final.tsv')
+        report_file_path = output_file_path if output_file_path else self.answer_file.replace('.tsv', '_result.tsv')
         with open(report_file_path, 'w', encoding='utf-8') as wf:
             wf.write('\t질문\t필수 포함 text\t검색된 text 1\t검색된 text 2\t검색된 text 3\t정답 포함 여부\t속도\n')
             for no, answer_obj in answer_dict.items():
