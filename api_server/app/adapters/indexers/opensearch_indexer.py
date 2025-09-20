@@ -41,9 +41,12 @@ class OpenSearchIndexer(IndexPort):
         with open(resource_file_path, "r", encoding="utf-8") as f:
             for line in f:
                 doc = json.loads(line.strip())
-                chunks.append(NormalizedChunk.model_validate(doc))
-
+                if self._is_published(doc):
+                    chunks.append(NormalizedChunk.model_validate(doc))
         return self._index(index_name, chunks)
+
+    def _is_published(self, doc: dict) -> bool:
+        return doc.get("published", True)
 
     def _index(self, index_name: str, chunks: Iterable[NormalizedChunk]) -> IndexResult:
         # Pydantic v2 → JSON 호환 dict

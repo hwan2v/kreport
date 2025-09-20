@@ -40,8 +40,17 @@ class HtmlTransformer(TransformPort):
         num = 0
         for doc in docs:
             # 1) 본문 조립
-            paragraphs: list[str] = [b.text for b in doc.blocks if b.text]
-            body = self.joiner.join(paragraphs).strip()
+            paragraphs = []
+            for b in doc.blocks:
+                if b.type == "body":
+                    body = b.text
+                elif b.type == "summary":
+                    summary = b.text
+                elif b.type == "infobox":
+                    infobox = b.text
+                elif b.type == "paragraph":
+                    paragraphs.append(b.text)
+            paragraph_text = self.joiner.join(paragraphs).strip()
 
             # 2) 메타 채우기(필요 시 doc.meta에서 author/date를 파싱하도록 확장 가능)
             created_date = infer_date_from_path(doc.source.uri)
@@ -61,6 +70,10 @@ class HtmlTransformer(TransformPort):
                 collection=doc.collection,
                 title=title,
                 body=body,
+                summary=summary,
+                infobox=infobox,
+                question=None,
+                answer=None,
                 title_embedding=None,
                 body_embedding=None,
                 created_date=created_date,

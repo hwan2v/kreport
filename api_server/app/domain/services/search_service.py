@@ -28,16 +28,8 @@ from typing import Iterable, Sequence, List
 import logging
 import traceback
 
-from api_server.app.domain.ports import (
-    FetchPort, ParsePort, TransformPort, IndexPort, SearchPort, ListenPort
-)
-from api_server.app.domain.models import (
-    IndexResult,
-    IndexErrorItem,
-    NormalizedChunk,
-    ParsedDocument,
-    RawDocument,
-)
+from api_server.app.domain.ports import SearchPort
+from api_server.app.domain.models import NormalizedChunk
 
 logger = logging.getLogger(__name__)
 
@@ -60,5 +52,4 @@ class SearchService:
     def search(self, query: str, size: int = 3) -> [NormalizedChunk]:
         """검색을 수행합니다.
         """
-        result = self._searcher.search(query, size)
-        return result
+        return self._searcher.search(query, size)

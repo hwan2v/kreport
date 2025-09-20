@@ -40,7 +40,6 @@ class TsvTransformer(TransformPort):
     def transform(self, docs: List[ParsedDocument]) -> Iterable[NormalizedChunk]:
         result = []
         for doc in docs:
-            print(doc.source.uri)
             created_date = infer_date_from_path(doc.source.uri)
             uri = doc.source.uri
             for i, b in enumerate(doc.blocks):
@@ -62,6 +61,10 @@ class TsvTransformer(TransformPort):
                     source_path=source_path,
                     file_type=file_type,
                     collection=doc.collection,
+                    title=None,
+                    body=None,
+                    summary=None,
+                    infobox=None,
                     question=question,
                     answer=answer,
                     title_embedding=None,   # 필요 시 임베딩 생성기로 채우기

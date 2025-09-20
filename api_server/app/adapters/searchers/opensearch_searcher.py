@@ -16,7 +16,7 @@ class OpenSearchSearcher(SearchPort):
         body = self._build_query(query, size)
         return self.client.search(index=self.alias_name, body=body)
 
-    def _build_query(self, query: str, size: int = 3) -> Dict[str, Any]:
+    def _build_query(self, query: str, size: int = 3, min_score: float = 10) -> Dict[str, Any]:
         """
         title, body 양쪽을 대상으로 keyword 검색 후 상위 N개 반환.
         Args:
@@ -26,13 +26,58 @@ class OpenSearchSearcher(SearchPort):
             list of _source dict
         """
         body = {
+            "from": 0,
             "size": size,
+            "min_score": min_score,
             "query": {
-                "multi_match": {
-                    "query": query,
-                    "fields": ["title", "body", "question", "answer"],
-                    "type": "best_fields",
-                    "operator": "or"
+                "bool": {
+                    "filter": {
+                        "bool": {
+                            "must": [
+                                {
+                                    "term": {
+                                        "published": True
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "should": [
+                        {
+                            "multi_match": {
+                                "query": query,
+                                "fields": ["title", "question"],
+                                "type": "best_fields",
+                                "operator": "or",
+                                "boost": 4
+                            }
+                        },
+                        {
+                            "multi_match": {
+                                "query": query,
+                                "fields": ["summary", "answer"],
+                                "type": "best_fields",
+                                "operator": "or",
+                                "boost": 1
+                            }
+                        },
+                        {
+                            "match": {
+                                "infobox": {
+                                    "query": query,
+                                    "boost": 3
+                                }
+                            }
+                        },
+                        {
+                            "match": {
+                                "summary": {
+                                    "query": query,
+                                    "boost": 0.5
+                                }
+                            }
+                        }
+                    ]
                 }
             }
         }

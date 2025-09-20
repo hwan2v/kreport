@@ -52,7 +52,7 @@ class RawDocument(BaseModel):
 
 class ParsedBlock(BaseModel):
     """파서가 뽑아낸 최소 블록 단위."""
-    type: Literal["title", "paragraph", "code", "list", "image", "other", "row"] = Field(
+    type: Literal["title", "body", "paragraph", "image", "summary", "infobox", "row"] = Field(
         "paragraph", description="블록 유형"
     )
     text: str | None = Field(None, description="텍스트 콘텐츠(이미지 등은 None)")
@@ -93,7 +93,11 @@ class NormalizedChunk(BaseModel):
 
     # ---- 내용 ----
     title: str | None = Field(None, description="문서 제목")
-    body: str = Field(..., description="본문 텍스트(정규화/전처리 후)")
+    body: str | None = Field(None, description="본문 텍스트(정규화/전처리 후)")
+    summary: str | None = Field(None, description="요약 텍스트")
+    infobox: str | None = Field(None, description="정보 박스 텍스트")
+    question: str | None = Field(None, description="질문 텍스트")
+    answer: str | None = Field(None, description="답변 텍스트")
 
     # ---- 임베딩(옵션) ----
     title_embedding: list[float] | None = Field(

@@ -11,7 +11,7 @@ from api_server.app.adapters.listeners.file_listener import FileListener
 from api_server.app.domain.services.search_service import SearchService
 from api_server.app.domain.services.index_service import IndexService
 from api_server.app.adapters.fetchers.file_fetcher import FileFetcher
-from api_server.app.adapters.parsers.html_parser import HtmlParser
+from api_server.app.adapters.parsers.wiki_parser import WikiParser
 from api_server.app.adapters.parsers.tsv_parser import TsvParser
 from api_server.app.adapters.transformers.html_transformer import HtmlTransformer
 from api_server.app.adapters.transformers.tsv_transformer import TsvTransformer
@@ -42,7 +42,7 @@ def get_fetcher() -> FetchPort:
     return FileFetcher()
 
 def get_parser() -> ParsePort:
-    return HtmlParser()
+    return WikiParser()
 
 def get_indexer(os: OpenSearch = Depends(get_opensearch)) -> IndexPort:
     # OpenSearchIndexer expects (client, prefix_index_name, alias_name)
@@ -62,7 +62,7 @@ class PipelineResolver:
         fetcher: FetchPort = FileFetcher()
 
         if source_type == "html":
-            parser: ParsePort = HtmlParser() 
+            parser: ParsePort = WikiParser() 
             transformer: TransformPort = HtmlTransformer(default_source_id="html")
         elif source_type == "tsv":
             parser: ParsePort = TsvParser()

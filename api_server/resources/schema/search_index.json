@@ -9,6 +9,13 @@
             "type": "custom",
             "tokenizer": "nori_tokenizer",
             "filter": ["lowercase", "nori_readingform", "nori_part_of_speech"]
+          },
+          "search_analyzer": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": [
+              "lowercase"
+            ]
           }
         },
         "normalizer": {
@@ -45,13 +52,13 @@
           }
         },
         "title_embedding": {
-            "type": "knn_vector",
-            "dimension": 384,
-            "method": {
-                "name": "hnsw",
-                "space_type": "cosinesimil",
-                "engine": "nmslib"
-            }
+          "type": "knn_vector",
+          "dimension": 384,
+          "method": {
+              "name": "hnsw",
+              "space_type": "cosinesimil",
+              "engine": "nmslib"
+          }
         },
         "body": {
           "type": "text",
@@ -66,19 +73,21 @@
             "engine": "nmslib"
           }
         },
+        "summary": {
+          "type": "text",
+          "analyzer": "ko_nori"
+        },
+        "infobox": {
+          "type": "text",
+          "analyzer": "ko_nori"
+        },
         "question": {
           "type": "text",
-          "analyzer": "ko_nori",
-          "fields": {
-            "keyword": { "type": "keyword", "ignore_above": 512 }
-          }
+          "analyzer": "ko_nori"
         },
         "answer": {
           "type": "text",
-          "analyzer": "ko_nori",
-          "fields": {
-            "keyword": { "type": "keyword", "ignore_above": 512 }
-          }
+          "analyzer": "ko_nori"
         },
         "created_date": {
           "type": "date",
@@ -94,7 +103,8 @@
           "index": false
         },
         "published": {
-          "type": "boolean"
+          "type": "boolean",
+          "index": false
         }
       }
     }

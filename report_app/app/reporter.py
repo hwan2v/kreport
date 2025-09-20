@@ -4,12 +4,13 @@ import sys
 import json
 import time
 import argparse
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Any
 from urllib.parse import urlparse
 from datetime import datetime
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+import re
 import traceback
 import csv
 import httpx
@@ -54,7 +55,7 @@ class SearchReport:
         """
         answer_dict = {}
         input_file_path = answer_file_path if answer_file_path else self.answer_file
-        with open(input_file_path, "r", encoding="utf-8") as f:
+        with open(input_file_path, "r", encoding="utf-8-sig") as f:
             reader = csv.reader(f, delimiter="\t")
             next(reader)
             for row in reader:
@@ -95,7 +96,79 @@ class SearchReport:
             pass
 
     
-    def report(self, answer_dict: dict, search_dict: dict, output_file_path: str = None):
+    def report(self, answer_dict: Dict[int, str], search_dict: Dict[int, Dict[str, Any]], output_file_path: str = None):
+        def sanitize(v: Any, keep_newlines: bool = True) -> str:
+            """TSV 안전화를 위한 전처리: 탭 제거, (선택) 개행 유지/제거."""
+            if v is None:
+                return ""
+            s = str(v)
+            s = s.replace("\t", " ")  # 탭은 반드시 공백으로
+            if keep_newlines:
+                # 개행은 셀 내부 줄바꿈으로 남김 (Excel에서도 한 셀로 보임)
+                return s
+            else:
+                # 행 밀림이 싫고, 한 줄로만 보이길 원하면 개행 제거
+                return s.replace("\r\n", " ").replace("\r", " ").replace("\n", " ")
+
+        true_count = 0
+        total_search_time = 0.0
+        report_file_path = output_file_path if output_file_path else self.answer_file.replace('.tsv', '_result.tsv')
+
+        # Excel 친화: utf-8-sig + newline='' + CRLF
+        with open(report_file_path, 'w', encoding='utf-8-sig', newline='') as wf:
+            writer = csv.writer(
+                wf,
+                delimiter="\t",
+                lineterminator="\r\n",   # CRLF
+                quotechar='"',
+                escapechar="\\",
+                doublequote=True
+            )
+
+            # 헤더
+            writer.writerow(["", "질문", "필수 포함 text", "검색된 text 1", "검색된 text 2", "검색된 text 3", "정답 포함 여부", "속도"])
+
+            for no, answer_obj in answer_dict.items():
+                question = answer_obj.get("question", "")
+                answer = answer_obj.get("answer", "")
+                search_result = search_dict[no]["search_result"]
+                search_time = search_dict[no]["search_time"]
+                parsed_search_results = self._parse_search_result(search_result)
+
+                is_contain_answer = (
+                    "true"
+                    if (len(parsed_search_results) > 0 and answer in parsed_search_results[0])
+                    else "false"
+                )
+                if is_contain_answer == "true":
+                    true_count += 1
+                total_search_time += float(search_time)
+
+                result_1 = parsed_search_results[0] if len(parsed_search_results) > 0 else ""
+                result_2 = parsed_search_results[1] if len(parsed_search_results) > 1 else ""
+                result_3 = parsed_search_results[2] if len(parsed_search_results) > 2 else ""
+
+                writer.writerow([
+                    sanitize(no, keep_newlines=False),             # 번호는 개행 불필요
+                    sanitize(question, keep_newlines=True),        # 긴 텍스트는 셀 내 줄바꿈 허용
+                    sanitize(answer, keep_newlines=True),
+                    sanitize(result_1, keep_newlines=True),
+                    sanitize(result_2, keep_newlines=True),
+                    sanitize(result_3, keep_newlines=True),
+                    sanitize(is_contain_answer, keep_newlines=False),
+                    sanitize(search_time, keep_newlines=False),
+                ])
+
+            avg = (total_search_time / max(len(answer_dict), 1))
+            writer.writerow([
+                "최종결과", "", "", "", "", "",
+                sanitize(true_count, keep_newlines=False),
+                sanitize(avg, keep_newlines=False),
+            ])
+
+
+
+    def report_old(self, answer_dict: dict, search_dict: dict, output_file_path: str = None):
         true_count = 0
         total_search_time = 0
         report_file_path = output_file_path if output_file_path else self.answer_file.replace('.tsv', '_result.tsv')
@@ -117,12 +190,14 @@ class SearchReport:
             average_search_time = total_search_time / len(answer_dict)
             wf.write(f"최종결과\t\t\t\t\t\t{true_count}\t{average_search_time}\n")
 
+
     def _parse_search_result(self, search_result):
         result = []
         hits = search_result["hits"]["hits"]
         for hit in hits:
             hit_dict = hit["_source"]
-            body = hit_dict["body"].replace("\n", " ").strip()
+            body = hit_dict["body"].replace("\n", " ")
+            #body = re.sub(r"\s+", " ", hit_dict["body"].replace("\n", "")).strip()
             result.append(body)
         return result
             
@@ -193,7 +268,7 @@ if __name__ == "__main__":
         #    search_report.search_answers_async(answer_dict, max_concurrency=20)
         #)
         # 리포트 생성
-        search_report.report(answer_dict, search_dict)
+        search_report.report_old(answer_dict, search_dict)
         # close session
         search_report.close()
         
