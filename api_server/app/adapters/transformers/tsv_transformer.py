@@ -74,6 +74,7 @@ class TsvTransformer(TransformPort):
                     updated_date=created_date,
                     author=author,
                     published=published,
+                    features=None,
                 )
                 result.append(chunk)
         return result

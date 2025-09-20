@@ -99,6 +99,9 @@ class NormalizedChunk(BaseModel):
     paragraph: str | None = Field(None, description="문단 텍스트")
     question: str | None = Field(None, description="질문 텍스트")
     answer: str | None = Field(None, description="답변 텍스트")
+    
+    # ---- 특성 ----
+    features: dict[str, float] | None = Field(None, description="특성 벡터")
 
     # ---- 임베딩(옵션) ----
     title_embedding: list[float] | None = Field(

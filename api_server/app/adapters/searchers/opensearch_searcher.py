@@ -31,63 +31,92 @@ class OpenSearchSearcher(SearchPort):
             "explain": explain,
             "min_score": min_score,
             "query": {
-                "bool": {
-                    "filter": {
+                "function_score": {
+                    "query": {
                         "bool": {
-                            "must": [
+                            "filter": {
+                                "bool": {
+                                    "must": [
+                                        {
+                                            "term": {
+                                                "published": True
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "should": [
                                 {
-                                    "term": {
-                                        "published": True
+                                    "multi_match": {
+                                        "query": query,
+                                        "fields": ["title", "title.keyword"],
+                                        "type": "best_fields",
+                                        "operator": "or",
+                                        "boost": 4
+                                    }
+                                },
+                                {
+                                    "multi_match": {
+                                        "query": query,
+                                        "fields": ["question", "answer"],
+                                        "type": "best_fields",
+                                        "operator": "or",
+                                        "boost": 2.5
+                                    }
+                                },
+                                {
+                                    "match": {
+                                        "infobox": {
+                                            "query": query,
+                                            "boost": 2
+                                        }
+                                    }
+                                },
+                                {
+                                    "match": {
+                                        "paragraph": {
+                                            "query": query,
+                                            "boost": 2
+                                        }
+                                    }
+                                },
+                                {
+                                    "multi_match": {
+                                        "query": query,
+                                        "fields": ["summary", "infobox"],
+                                        "type": "best_fields",
+                                        "operator": "or",
+                                        "boost": 2
                                     }
                                 }
                             ]
                         }
                     },
-                    "should": [
+                    "functions": [
                         {
-                            "multi_match": {
-                                "query": query,
-                                "fields": ["title", "title.keyword"],
-                                "type": "best_fields",
-                                "operator": "or",
-                                "boost": 4
+                            "field_value_factor": {
+                                "field": "features.body",
+                                "factor": 1.5,
+                                "missing": 1
                             }
                         },
                         {
-                            "multi_match": {
-                                "query": query,
-                                "fields": ["question", "answer"],
-                                "type": "best_fields",
-                                "operator": "or",
-                                "boost": 2.5
+                            "field_value_factor": {
+                                "field": "features.summary",
+                                "factor": 3,
+                                "missing": 1
                             }
                         },
                         {
-                            "match": {
-                                "infobox": {
-                                    "query": query,
-                                    "boost": 1.5
-                                }
-                            }
-                        },
-                        {
-                            "match": {
-                                "paragraph": {
-                                    "query": query,
-                                    "boost": 2
-                                }
-                            }
-                        },
-                        {
-                            "multi_match": {
-                                "query": query,
-                                "fields": ["summary", "infobox"],
-                                "type": "best_fields",
-                                "operator": "or",
-                                "boost": 2
+                            "field_value_factor": {
+                                "field": "features.infobox",
+                                "factor": 8,
+                                "missing": 3
                             }
                         }
-                    ]
+                    ],
+                    "score_mode": "avg",
+                    "boost_mode": "sum"
                 }
             }
         }

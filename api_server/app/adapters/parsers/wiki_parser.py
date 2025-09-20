@@ -45,7 +45,7 @@ class WikiParser(ParsePort):
         blocks.append(self._parse_body_from(soup, self._MANDATORY_SELECTOR_DICT["body"]))
         self._parse_body_if_blocks_is_empty(soup, blocks)
         blocks = [block for block in blocks if block is not None]
-
+        
         return ParsedDocument(
             source=raw.source,
             title=title,

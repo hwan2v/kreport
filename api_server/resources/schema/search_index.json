@@ -3,6 +3,18 @@
       "number_of_shards": 1,
       "refresh_interval": "1s",
       "index.knn": true,
+      "similarity": {
+        "answer_bm25": {
+          "type": "BM25",
+          "b": 0,
+          "k1": 1.2
+        },
+        "low_k1_bm25": {
+          "type": "BM25",
+          "b": 0.75,
+          "k1": 0.15
+        }
+      },
       "analysis": {
         "analyzer": {
           "ko_nori": {
@@ -62,8 +74,7 @@
         },
         "body": {
           "type": "text",
-          "analyzer": "ko_nori",
-          "search_analyzer": "search_analyzer"
+          "analyzer": "ko_nori"
         },
         "body_embedding": {
           "type": "knn_vector",
@@ -110,6 +121,26 @@
         "published": {
           "type": "boolean",
           "index": false
+        },
+        "features": {
+          "properties": {
+            "body": {
+              "type": "float",
+              "index": false
+            },
+            "summary": {
+              "type": "float",
+              "index": false
+            },
+            "infobox": {
+              "type": "float",
+              "index": false
+            },
+            "paragraph": {
+              "type": "float",
+              "index": false
+            }
+          }
         }
       }
     }
