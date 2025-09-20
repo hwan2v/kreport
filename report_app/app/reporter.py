@@ -135,7 +135,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--alias_name', 
         '-n',
-        default='tsv',
+        default='kakaobank',
         help='alias name for opensearch', 
         dest='alias_name')
     parser.add_argument(
