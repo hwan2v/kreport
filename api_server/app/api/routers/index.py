@@ -10,7 +10,7 @@ from api_server.app.domain.services.search_service import SearchService
 router = APIRouter(prefix="/index", tags=["index"])# dependencies=[Depends(require_api_key)])
 
 class IndexRequest(BaseModel):
-    source: str = Field(..., description="html or tsv")
+    source: str = Field("all", description="html or tsv")
     date: str = Field(..., description="날짜")
 
 @router.post("", summary="문서 인덱싱")

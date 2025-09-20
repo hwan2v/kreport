@@ -9,6 +9,7 @@ from opensearchpy import OpenSearch
 from api_server.app.domain.ports import FetchPort, ParsePort, TransformPort, IndexPort, SearchPort, ListenPort
 from api_server.app.adapters.listeners.file_listener import FileListener
 from api_server.app.domain.services.search_service import SearchService
+from api_server.app.domain.services.index_service import IndexService
 from api_server.app.adapters.fetchers.file_fetcher import FileFetcher
 from api_server.app.adapters.parsers.html_parser import HtmlParser
 from api_server.app.adapters.parsers.tsv_parser import TsvParser

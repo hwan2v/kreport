@@ -7,6 +7,9 @@ import argparse
 from typing import Dict, List, Union
 from urllib.parse import urlparse
 from datetime import datetime
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import traceback
 import csv
 from opensearchpy import OpenSearch, helpers
@@ -19,15 +22,24 @@ class SearchReport:
         self, 
         answer_file: str, 
         count: int, 
-        opensearch: OpenSearch,
-        alias_name: str
+        api_url: str
     ):
         self.answer_file = answer_file
         self.count = count
-        self.os = os
-        self.alias_name = alias_name
-        self.opensearch = opensearch
+        self.api_url = api_url
         self.answer_dict = {}
+        # Reuse a single HTTP session for connection pooling/keep-alive
+        self.session = requests.Session()
+        retry = Retry(
+            total=3,
+            backoff_factor=0.3,
+            status_forcelist=(429, 500, 502, 503, 504),
+            allowed_methods=("GET", "POST"),
+        )
+        adapter = HTTPAdapter(max_retries=retry, pool_connections=10, pool_maxsize=10)
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
+        self.session.headers.update({"Connection": "keep-alive"})
     
     
     def init_answer_file(self, answer_file_path: str = None):
@@ -61,15 +73,25 @@ class SearchReport:
         for no, report_obj in answer_dict.items():
             question = report_obj["question"]
             answer = report_obj["answer"]
-            body = self._build_query(question, self.count)
             start_time = datetime.now()
-            search_result = self.opensearch.search(index=self.alias_name, body=body)
+            response = self.session.post(
+                f"{self.api_url}/api/search",
+                json={"query": question, "size": self.count},
+                timeout=10,
+            )
+            search_result = response.json()["data"]
             search_time = (datetime.now() - start_time).total_seconds()
             search_dict[no] = {
                 "search_result": search_result,
                 "search_time": search_time
             }
         return search_dict
+
+    def close(self):
+        try:
+            self.session.close()
+        except Exception:
+            pass
 
     
     def report(self, answer_dict: dict, search_dict: dict, output_file_path: str = None):
@@ -87,21 +109,20 @@ class SearchReport:
                 is_contain_answer = "true" if len(parsed_search_results) > 0 and answer in parsed_search_results[0] else "false"
                 true_count += 1 if is_contain_answer == "true" else 0
                 total_search_time += search_time
-                result_1 = parsed_search_results[0] if len(parsed_search_results) > 0 else ""
-                result_2 = parsed_search_results[1] if len(parsed_search_results) > 1 else ""
-                result_3 = parsed_search_results[2] if len(parsed_search_results) > 2 else ""
+                result_1 = parsed_search_results[0] if len(parsed_search_results) > 0 else " "
+                result_2 = parsed_search_results[1] if len(parsed_search_results) > 1 else " "
+                result_3 = parsed_search_results[2] if len(parsed_search_results) > 2 else " "
                 wf.write(f'{no}\t{question}\t{answer}\t{result_1}\t{result_2}\t{result_3}\t{is_contain_answer}\t{search_time}\n')
             average_search_time = total_search_time / len(answer_dict)
-            wf.write(f'정답 개수: {len(answer_dict)}\n')
-            wf.write(f'정답 포함 검색 개수: {true_count}\n')
-            wf.write(f'평균 속도(sec): {average_search_time}\n')
+            wf.write(f"최종결과\t\t\t\t\t\t{true_count}\t{average_search_time}\n")
 
     def _parse_search_result(self, search_result):
         result = []
         hits = search_result["hits"]["hits"]
         for hit in hits:
             hit_dict = hit["_source"]
-            result.append(hit_dict["body"])
+            body = hit_dict["body"].replace("\n", " ").strip()
+            result.append(body)
         return result
             
     def _build_query(self, question: str, size: int = 3):
@@ -133,35 +154,22 @@ if __name__ == "__main__":
         help='count for answer', 
         dest='count')
     parser.add_argument(
-        '--alias_name', 
-        '-n',
-        default='kakaobank',
-        help='alias name for opensearch', 
-        dest='alias_name')
-    parser.add_argument(
-        '--opensearch_host', 
-        '-o',
-        default='http://localhost:9200',
-        help='opensearch host', 
-        dest='opensearch_host')
+        '--api_url', 
+        '-u',
+        default='http://localhost:8000',
+        help='api url', 
+        dest='api_url')
 
     args = parser.parse_args()
     try:
         logger.info(
-            f"report start: answer_file={args.answer_file} count={args.count} alias_name={args.alias_name} opensearch_host={args.opensearch_host}"
-        )
-        
-        u = urlparse(args.opensearch_host)
-        opensearch = OpenSearch(
-            hosts=[{"host": u.hostname, "port": u.port or 9200, "scheme": u.scheme or "http"}],
-            verify_certs=False,
+            f"report start: answer_file={args.answer_file} count={args.count} api_url={args.api_url}"
         )
         
         search_report = SearchReport(
             answer_file=args.answer_file,
             count=args.count,
-            opensearch=opensearch,
-            alias_name=args.alias_name
+            api_url=args.api_url
         )
         
         # 질문 파일 초기화
@@ -170,6 +178,8 @@ if __name__ == "__main__":
         search_dict = search_report.search_answers(answer_dict)
         # 리포트 생성
         search_report.report(answer_dict, search_dict)
+        # close session
+        search_report.close()
         
         logger.info(f"report success: {args.answer_file}")
     except Exception as e:

@@ -10,7 +10,7 @@ router = APIRouter(prefix="/search", tags=["search"])# dependencies=[Depends(req
 
 class SearchRequest(BaseModel):
     query: str = Field(..., description="검색 쿼리")
-    size: Optional[int] = Field(3, description="검색 결과 개수")
+    size: int = Field(3, description="검색 결과 개수")
 
 @router.post("", summary="문서 추출 후 저장")
 def search(req: SearchRequest, svc: SearchService = Depends(get_search_service)):

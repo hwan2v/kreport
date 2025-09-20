@@ -29,7 +29,7 @@ import logging
 import traceback
 
 from api_server.app.domain.ports import (
-    FetchPort, ParsePort, TransformPort, IndexPort, SearchPort, ListenPort
+    FetchPort, ParsePort, TransformPort, IndexPort, ListenPort
 )
 from api_server.app.domain.models import (
     IndexResult,
@@ -63,7 +63,6 @@ class IndexService:
         self._parser = parser
         self._transformer = transformer
         self._indexer = indexer
-        self._searcher = searcher
         
     # ---------- public API ----------
 
