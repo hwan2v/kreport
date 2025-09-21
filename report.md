@@ -134,9 +134,43 @@ false로 “정답 포함 여부” 셀에 작성되도록 합니다.
 
 ## todo
 금: 폴더 구조 정리, 색인 구조 변경, 테스트 코드 추가
-토: 품질, 성능 추가, 셀러리 구조도 생각해보기(임베딩)
+토: 품질(파싱, 트랜스폼), 성능 추가, 셀러리 구조도 생각해보기(임베딩)
+  과거문서 포함 추출? 색인 해야해?
+  
 일: 기타 보완, 문서 작성
 월: 마무리
+
+
+
+역할 구분
+Parse (파싱)
+원천 포맷 → 내부 중간 스키마로 구조화
+HTML: DOM 파서로 title, headings, body, links, lang? 추출
+TSV/CSV: 컬럼 분리, 타입 캐스팅 시도(문자→숫자/날짜)
+파일 메타: uri, etag, last_modified, size
+결과: 원본에 충실한 최소 정보 + 표준 필드명
+실패 기준: 문법 오류, 필수 필드 부재(= “읽을 수 없음”)
+산출물: Raw/Parsed 모델 (예: ParsedHtml, ParsedQnaRow)
+
+Transform (변환)
+Parsed → 색인/검색/분석에 최적화
+정제: 불필요 태그/스크립트 제거, 공백/이모지/제어문자 정리
+정규화: 소문자화, 표기 통합(예: “k8s”↔“Kubernetes”), 토큰 정리
+축약/분할: 본문을 문단/문장 chunk로 나누기, 길이 제한
+파생 특성: all_text 생성(copy_to 대상), 키워드 필드, n-gram, 요약문
+품질/검증: 길이/언어 필터, 금칙어/PII 마스킹
+풍부화(enrichment): 키워드 태깅, 엔티티 인식, 카테고리, 중요도
+임베딩: *_vec 계산 → kNN 색인용
+결과: Index 모델 (예: IndexDocHtml, IndexDocQna)
+
+왜 분리하나?
+관심사 분리: “읽기 실패”와 “품질/정책 실패”를 구분 → 운영/리트라이 용이
+재사용성: Parsed를 보존하면 다른 변환 파이프라인(요약/NER/임베딩) 재사용
+테스트 용이: 파서는 포맷 안정성, 트랜스폼은 품질/랭킹 효과를 독립 검증
+에러 정책(권장)
+Parse 실패 → Hard fail (소스/포맷 이슈)
+Transform 실패 → Soft fail (특정 enrichment만 건너뛰고 기본 색인은 진행)
+상태 기록: manifest에 parsed_ok, transformed_ok, indexed_ok와 원인 로그
 
 
 # 아이디어
@@ -159,7 +193,7 @@ body_embedding: list
 created_date : datetime
 updated_date : datetime
 author : keyword
-is_open : boolean
+published : boolean
 
   
 ### 확장성
