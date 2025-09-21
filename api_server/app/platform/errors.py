@@ -21,5 +21,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     logging.getLogger(__name__).exception("Unhandled exception")
     return JSONResponse(status_code=500,
                         content=error_envelope(
-                            "Internal server error", code="INTERNAL_ERROR", 
+                            "Internal server error", 
+                            code="INTERNAL_ERROR", 
                             trace_id=request_id_ctx.get()))

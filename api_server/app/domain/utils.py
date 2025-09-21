@@ -20,7 +20,7 @@ def ext_to_file_type(path: Path) -> FileType:
         return FileType.html
     if ext in {".tsv"}:
         return FileType.tsv
-    return FileType.plain
+    raise ValueError(f"Unsupported file type: {ext}")
 
 
 def choose_collection(ft: FileType) -> Collection:

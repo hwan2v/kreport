@@ -1,38 +1,126 @@
-# tests/integration/test_extract_api.py
+# api_server/tests/integration/test_api_extract.py
+
 from fastapi.testclient import TestClient
+from unittest.mock import MagicMock
+import pytest
+
 from api_server.app.main import app
-from api_server.app.api import deps
-from api_server.app.domain.services.search_service import SearchService
+from api_server.app.api.deps import get_pipeline_resolver
+from api_server.app.domain.models import FileType, Collection
 
-class FakeFetch:  # FetchPort
-    def fetch(self, uri: str):
-        from api_server.app.domain.models import RawDocument, SourceRef, FileType
-        return RawDocument(source=SourceRef(uri=uri, file_type=FileType.html), body_text="<p>hello</p>")
+"""
+Depends(get_pipeline_resolver) 를 dependency_overrides 로 대체해 통합 관점에서 테스트.
+source=tsv/html 일 때 각각 올바른 Collection 매핑(qna/wiki)과 호출 파라미터를 검증.
+source=all 일 때 두 서비스 모두 호출되며, 구현 특성상 **마지막 호출(tsv)**의 결과가 응답 data에 담기는 점을 검증.
+    잘못된 source는 현재 구현상 500 에러가 발생함을 명시적으로 테스트하여, 후속으로 예외 처리/검증 로직 개선 근거로 활용 가능
+"""
 
-class FakeParse:  # ParsePort
-    def parse(self, raw):
-        from api_server.app.domain.models import ParsedDocument, ParsedBlock
-        return ParsedDocument(source=raw.source, title="T", blocks=[ParsedBlock(type="paragraph", text="hello")])
+class DummyResolver:
+    """
+    routers.extract 에서 resolver.for_type(FileType) 로 서비스를 받는 것을 흉내내는 간단한 DI 대역
+    """
+    def __init__(self, mapping):
+        self._mapping = mapping
 
-class FakeXform:  # TransformPort
-    def to_chunks(self, doc, collection):
-        from api_server.app.domain.models import NormalizedChunk
-        yield NormalizedChunk(collection=collection, doc_id="doc_1", seq=0, title=doc.title, content="hello", url=doc.source.uri, lang=None)
+    def for_type(self, ft: FileType):
+        return self._mapping[ft]
 
-class FakeIndexer:  # IndexPort
-    def index(self, chunks):
-        from api_server.app.domain.models import IndexResult
-        return IndexResult(indexed=len(list(chunks)), errors=[])
 
-def override_search_service():
-    return SearchService(FakeFetch(), FakeParse(), FakeXform(), FakeIndexer())
+@pytest.fixture
+def client():
+    return TestClient(app, raise_server_exceptions=False)
 
-def test_extract_ok():
-    app.dependency_overrides[deps.get_search_service] = override_search_service
 
-    client = TestClient(app)
-    r = client.post("/api/extract", json={"source":"https://ex", "collection":"news"})
-    assert r.status_code == 200
-    assert r.json()["indexed"] == 1
+@pytest.fixture
+def svc_html():
+    # extract(source, date, collection) -> 파일명(or 경로) 반환처럼 동작시킴
+    m = MagicMock()
+    m.extract.return_value = "wiki_3_parsed.json"
+    return m
 
+
+@pytest.fixture
+def svc_tsv():
+    m = MagicMock()
+    m.extract.return_value = "qna_3_parsed.json"
+    return m
+
+
+@pytest.fixture(autouse=True)
+def override_resolver(svc_html, svc_tsv):
+    """
+    /extract 엔드포인트의 Depends(get_pipeline_resolver)를 오버라이드
+    """
+    resolver = DummyResolver(
+        {
+            FileType.html: svc_html,
+            FileType.tsv: svc_tsv,
+        }
+    )
+    app.dependency_overrides[get_pipeline_resolver] = lambda: resolver
+    yield
     app.dependency_overrides.clear()
+
+
+def test_extract_single_tsv(client, svc_html, svc_tsv):
+    """
+    source=tsv 이면 TSV용 서비스만 호출되고, 컬렉션 매핑은 qna 이어야 한다.
+    """
+    r = client.post("/api/extract", json={"source": "tsv", "date": "3"})
+    assert r.status_code == 200
+    body = r.json()
+    print(body)
+    assert body["success"] is True
+    assert body["message"].startswith("문서 추출 후 저장")
+    # 반환 데이터는 서비스가 돌려준 파일명(엔드포인트 구현)
+    assert body["data"] == "qna_3_parsed.json"
+
+    # 호출 검증
+    svc_tsv.extract.assert_called_once_with(source="tsv", date="3", collection=Collection.qna)
+    svc_html.extract.assert_not_called()
+
+
+def test_extract_single_html(client, svc_html, svc_tsv):
+    """
+    source=html 이면 HTML용 서비스만 호출되고, 컬렉션 매핑은 wiki 이어야 한다.
+    """
+    r = client.post("/api/extract", json={"source": "html", "date": "4"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["success"] is True
+    assert body["data"] == "wiki_3_parsed.json" or body["data"] == "wiki_4_parsed.json"  # 서비스 대역이 무엇을 리턴하느냐에 따라
+    # 현재 대역은 고정값 "wiki_3_parsed.json" 을 리턴하도록 했으므로 아래처럼도 OK
+    assert body["data"] == "wiki_3_parsed.json"
+
+    svc_html.extract.assert_called_once_with(source="html", date="4", collection=Collection.wiki)
+    svc_tsv.extract.assert_not_called()
+
+
+def test_extract_all_calls_both_and_returns_last(client, svc_html, svc_tsv):
+    """
+    source=all 이면 FileType.__members__ 순서(html, tsv)로 두 서비스를 다 호출.
+    구현상 마지막 호출의 결과가 data에 담겨 반환된다(tsv가 마지막).
+    """
+    r = client.post("/api/extract", json={"source": "all", "date": "3"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["success"] is True
+    # 마지막에 호출된 tsv 서비스의 반환값이어야 함
+    assert body["data"] == "qna_3_parsed.json"
+
+    svc_html.extract.assert_called_once_with(source="html", date="3", collection=Collection.wiki)
+    svc_tsv.extract.assert_called_once_with(source="tsv", date="3", collection=Collection.qna)
+
+
+def test_extract_invalid_source_returns_500(client, svc_html, svc_tsv):
+    """
+    잘못된 source 값을 넣으면 라우터 내부에서 FileType(...) 변환 시 ValueError가 발생하여 500이 날 가능성이 큼.
+    (엔드포인트 구현에 try/except가 없기 때문)
+    """
+    r = client.post("/api/extract", json={"source": "pdf", "date": "3"})
+    # 현재 구현대로면 500 Internal Server Error 가 떨어짐
+    assert r.status_code == 500
+
+    # 호출 자체가 일어나지 않아야 함
+    svc_html.extract.assert_not_called()
+    svc_tsv.extract.assert_not_called()

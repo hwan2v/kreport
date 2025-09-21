@@ -142,7 +142,7 @@ class IndexService:
             self._indexer.prefix_index_name, 
             delete_old=False
         )
-        result = indexResult.dict() | aliasResult.dict()
+        result = indexResult.model_dump() | aliasResult.model_dump()
         return result
 
     #================= internal helpers =================
@@ -177,4 +177,4 @@ class IndexService:
         out_dir: str = "./data"
     ) -> str:
         file_name = f"{collection.value}_{date}_{suffix}.json"
-        return f'{out_dir}/{file_name}'
+        return str(Path(out_dir) / file_name)

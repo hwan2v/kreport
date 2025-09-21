@@ -26,13 +26,11 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
-        # 필요 시 종료 처리
         try:
             app.state.opensearch.close()
         except Exception:
             pass
 
-#setup_logging(log_to_file=True, log_dir="/var/log/app")
 app = FastAPI(title="KReport API", lifespan=lifespan)
 app.include_router(health.router)
 app.include_router(extract.router, prefix="/api")

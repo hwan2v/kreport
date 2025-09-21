@@ -10,3 +10,5 @@ lxml
 requests
 selectolax
 pyquery
+pytest
+pytest-cov

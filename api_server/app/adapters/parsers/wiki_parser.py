@@ -161,20 +161,22 @@ class WikiParser(ParsePort):
         # summary 선택 선택자 추출
         summary_result = []
         container = soup.find("div", class_=selector)
+        if not container:
+            return None
         table = container.find("table", class_="infobox vcard")
-        if table:
-            for sibling in table.find_next_siblings():
-                # meta 태그 만나면 멈춤
-                if sibling.name == "meta" and sibling.get("property") == "mw:PageProp/toc":
-                    break
-                # p 태그만 추출
-                if sibling.name == "p":
-                    text = sibling.get_text()
-                    if text:  # 빈 문단 제외
-                        summary_result.append(text)
-            summary_text = " ".join(summary_result)
-            return ParsedBlock(type="summary", text=summary_text)
-        return None
+        if not table:
+            return None
+        for sibling in table.find_next_siblings():
+            # meta 태그 만나면 멈춤
+            if sibling.name == "meta" and sibling.get("property") == "mw:PageProp/toc":
+                break
+            # p 태그만 추출
+            if sibling.name == "p":
+                text = sibling.get_text()
+                if text:  # 빈 문단 제외
+                    summary_result.append(text)
+        summary_text = " ".join(summary_result)
+        return ParsedBlock(type="summary", text=summary_text)
 
     def _parse_paragraph_from(
         self, 

@@ -33,7 +33,8 @@ class FileFetcher(FetchPort):
         except UnicodeDecodeError:
             body_text = body_bytes.decode("utf-8", errors="ignore")
             encoding = "utf-8"
-
+        body_text = body_text.replace("\r\n", "\n").replace("\r", "\n")
+        
         src = SourceRef(
             uri=uri,
             file_type=ext_to_file_type(path),
