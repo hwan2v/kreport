@@ -11,7 +11,7 @@ from api_server.app.domain.utils import infer_date_from_path
 from api_server.app.domain.ports import TransformPort
 from api_server.app.domain.models import ParsedDocument, NormalizedChunk
 
-class TsvTransformer(TransformPort):
+class QnaTransformer(TransformPort):
     """
     TSV ParsedDocument → NormalizedChunk[]
     (※ 기존 TransformPort가 NormalizedChunk를 반환했다면,

@@ -6,15 +6,17 @@ from urllib.parse import urlparse
 from fastapi import Depends, Request
 from opensearchpy import OpenSearch
 
-from api_server.app.domain.ports import FetchPort, ParsePort, TransformPort, IndexPort, SearchPort, ListenPort
+from api_server.app.domain.ports import (
+    FetchPort, ParsePort, TransformPort, IndexPort, SearchPort, ListenPort
+)
 from api_server.app.adapters.listeners.file_listener import FileListener
 from api_server.app.domain.services.search_service import SearchService
 from api_server.app.domain.services.index_service import IndexService
 from api_server.app.adapters.fetchers.file_fetcher import FileFetcher
 from api_server.app.adapters.parsers.wiki_parser import WikiParser
-from api_server.app.adapters.parsers.tsv_parser import TsvParser
+from api_server.app.adapters.parsers.qna_parser import QnaParser
 from api_server.app.adapters.transformers.wiki_transformer import WikiTransformer
-from api_server.app.adapters.transformers.tsv_transformer import TsvTransformer
+from api_server.app.adapters.transformers.qna_transformer import QnaTransformer
 from api_server.app.adapters.indexers.opensearch_indexer import OpenSearchIndexer
 from api_server.app.adapters.searchers.opensearch_searcher import OpenSearchSearcher
 from api_server.app.platform.config import settings
@@ -32,7 +34,9 @@ def get_opensearch(request: Request) -> OpenSearch:
     # fallback: 즉석 생성 (테스트/단일 프로세스용)
     u = urlparse(settings.OPENSEARCH_HOST)
     return OpenSearch(
-        hosts=[{"host": u.hostname, "port": u.port or 9200, "scheme": u.scheme or "http"}],
+        hosts=[
+            {"host": u.hostname, "port": u.port or 9200, "scheme": u.scheme or "http"}
+        ],
         verify_certs=False,
     )
 
@@ -65,8 +69,8 @@ class PipelineResolver:
             parser: ParsePort = WikiParser() 
             transformer: TransformPort = WikiTransformer(default_source_id="html")
         elif source_type == "tsv":
-            parser: ParsePort = TsvParser()
-            transformer: TransformPort = TsvTransformer(default_source_id="tsv")
+            parser: ParsePort = QnaParser()
+            transformer: TransformPort = QnaTransformer(default_source_id="tsv")
         else:
             raise ValueError(f"unsupported source_type: {source_type}")
 

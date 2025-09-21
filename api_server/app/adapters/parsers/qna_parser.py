@@ -12,7 +12,7 @@ from api_server.app.domain.models import ParsedDocument, ParsedBlock, RawDocumen
 
 REQUIRED_COLS = {"id", "question", "answer", "published", "user_id"}
 
-class TsvParser(ParsePort):
+class QnaParser(ParsePort):
     """
     TSV 텍스트를 읽어 각 행을 ParsedBlock(meta=row)으로 담는다.
     """
