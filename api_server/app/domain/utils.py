@@ -29,7 +29,5 @@ def choose_collection(ft: FileType) -> Collection:
             return Collection.wiki
         case FileType.tsv:
             return Collection.qna
-        case FileType.plain:
-            return Collection.wiki
         case _:
             raise ValueError(f"Unsupported file type: {ft}")

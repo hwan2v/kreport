@@ -23,7 +23,7 @@ from pydantic import BaseModel
 from pathlib import Path
 import json
 import os
-from typing import Iterable, Sequence, List
+from typing import Iterable, Sequence, List, Any
 
 import logging
 import traceback
@@ -39,8 +39,7 @@ class SearchService:
 
     def __init__(
         self,
-        searcher: SearchPort
-    ) -> None:
+        searcher: SearchPort) -> None:
         """
         Args:
             fetcher: 원문을 가져오는 포트(HTTP/파일/S3 등)
@@ -49,7 +48,11 @@ class SearchService:
         self._searcher = searcher
         
     # ---------- public API ----------
-    def search(self, query: str, size: int = 3, explain: bool = False) -> [NormalizedChunk]:
+    def search(
+        self, 
+        query: str, 
+        size: int = 3, 
+        explain: bool = False) -> Any:
         """검색을 수행합니다.
         """
         return self._searcher.search(query, size, explain)

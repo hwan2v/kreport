@@ -13,7 +13,7 @@ from api_server.app.domain.services.index_service import IndexService
 from api_server.app.adapters.fetchers.file_fetcher import FileFetcher
 from api_server.app.adapters.parsers.wiki_parser import WikiParser
 from api_server.app.adapters.parsers.tsv_parser import TsvParser
-from api_server.app.adapters.transformers.html_transformer import HtmlTransformer
+from api_server.app.adapters.transformers.wiki_transformer import WikiTransformer
 from api_server.app.adapters.transformers.tsv_transformer import TsvTransformer
 from api_server.app.adapters.indexers.opensearch_indexer import OpenSearchIndexer
 from api_server.app.adapters.searchers.opensearch_searcher import OpenSearchSearcher
@@ -63,7 +63,7 @@ class PipelineResolver:
 
         if source_type == "html":
             parser: ParsePort = WikiParser() 
-            transformer: TransformPort = HtmlTransformer(default_source_id="html")
+            transformer: TransformPort = WikiTransformer(default_source_id="html")
         elif source_type == "tsv":
             parser: ParsePort = TsvParser()
             transformer: TransformPort = TsvTransformer(default_source_id="tsv")

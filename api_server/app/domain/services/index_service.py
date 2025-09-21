@@ -32,11 +32,11 @@ from api_server.app.domain.ports import (
     FetchPort, ParsePort, TransformPort, IndexPort, ListenPort
 )
 from api_server.app.domain.models import (
-    IndexResult,
-    IndexErrorItem,
     NormalizedChunk,
     ParsedDocument,
     RawDocument,
+    IndexResult,
+    AliasResult
 )
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,11 @@ class IndexService:
         
     # ---------- public API ----------
 
-    def extract(self, source: str, date: str, collection: Collection) -> [ParsedDocument]:
+    def extract(
+        self, 
+        source: str, 
+        date: str, 
+        collection: Collection) -> [ParsedDocument]:
         """단일 소스를 처리해 즉시 파싱합니다.
 
         Args:
@@ -80,42 +84,71 @@ class IndexService:
         logger.info("service.run: source=%s date=%s", source, date)
         
         result = []
-        resource_files = self._listener.listen(source, date)
+        resource_files = self._listener.listen(source, date, extension=source.lower())
         for resource_file in resource_files:
             raw: RawDocument = self._fetcher.fetch(resource_file, collection)
             parsed: ParsedDocument = self._parser.parse(raw)
             result.append(parsed)
-        return self._save_parsed_document(
-            collection, date, docs=result, suffix="parsed")
 
-    def transform(self, source: str, date: str, collection: Collection) -> [NormalizedChunk]:
+        out_dir = self._get_resource_dir_path(source, date)
+        return self._save_parsed_document(
+            collection, 
+            date, 
+            docs=result, 
+            suffix="parsed", 
+            out_dir=out_dir)
+
+    def transform(
+        self, 
+        source: str, 
+        date: str, 
+        collection: Collection) -> [NormalizedChunk]:
         """단일 소스를 처리해 즉시 변환합니다.
         """
         logger.info("service.transform: source=%s date=%s", source, date)
         
-        parsed_file_name = self._create_file_name(collection, date, suffix="parsed")
-        parsed_docs: List[ParsedDocument] = self._transformer.read_parsed_document(parsed_file_name)
+        out_dir = self._get_resource_dir_path(source, date)
+        parsed_file_name = self._create_file_name(
+            collection, 
+            date, 
+            suffix="parsed", 
+            out_dir=out_dir)
+        
+        parsed_docs: List[ParsedDocument] = \
+            self._transformer.read_parsed_document(parsed_file_name)
         result = self._transformer.transform(parsed_docs)
         return self._save_parsed_document(
-            collection, date, docs=result, suffix="normalized")
+            collection, 
+            date, 
+            docs=result, 
+            suffix="normalized", 
+            out_dir=out_dir)
 
     def index(self, source: str, date: str, collection: Collection) -> None:
         """단일 소스를 처리해 즉시 인덱싱합니다.
         """
         logger.info("service.index: source=%s date=%s", source, date)
         
+        out_dir = self._get_resource_dir_path(source, date)
+        normalized_file_name = self._create_file_name(
+            collection, 
+            date, 
+            suffix="normalized", 
+            out_dir=out_dir)
         index_name = self._indexer.create_index(source, date)
-        normalized_file_name = self._create_file_name(collection, date, suffix="normalized")
-        print(normalized_file_name)
-        result = self._indexer.index(index_name, normalized_file_name)
-        print(result)
-        return self._indexer.rotate_alias_to_latest(
+        indexResult: IndexResult = self._indexer.index(index_name, normalized_file_name)
+        aliasResult: AliasResult = self._indexer.rotate_alias_to_latest(
             self._indexer.alias_name, 
             self._indexer.prefix_index_name, 
             delete_old=False
         )
+        result = indexResult.dict() | aliasResult.dict()
+        return result
 
     #================= internal helpers =================
+    def _get_resource_dir_path(self, source: str, date: str) -> str:
+        return f"api_server/resources/data/{source}/day_{date}"
+    
     def _save_parsed_document(
         self, 
         collection: Collection, 
@@ -130,7 +163,9 @@ class IndexService:
         out.parent.mkdir(parents=True, exist_ok=True)
         with out.open("w", encoding="utf-8") as f:
             for doc in docs:
-                f.write(json.dumps(doc.model_dump(mode="json"), ensure_ascii=False) + "\n")
+                f.write(json.dumps(
+                    doc.model_dump(mode="json"), ensure_ascii=False))
+                f.write("\n")
         print(f"{file_name} 파일이 생성되었습니다.")
         return out.name
     

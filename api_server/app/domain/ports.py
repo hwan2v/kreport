@@ -19,7 +19,7 @@ from .models import (
 
 class ListenPort(Protocol):
     """원문을 가져온다(HTTP, 파일, S3 등)."""
-    def listen(self, source: str, date: str) -> List[str]:
+    def listen(self, source: str, date: str, extension: str) -> List[str]:
         """
         Returns:
             List[str]: 파일 경로 목록
@@ -91,9 +91,9 @@ class SearchPort(Protocol):
     """
     검색을 수행합니다.
     """
-    def search(self, query: str, size: int = 3) -> [NormalizedChunk]:
+    def search(self, query: str, size: int = 3) -> Any:
         """
         Returns:
-            [NormalizedChunk]: 검색 결과
+            Any: 검색 결과
         """
         ...

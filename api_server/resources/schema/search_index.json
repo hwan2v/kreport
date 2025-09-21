@@ -1,12 +1,13 @@
 {
     "settings": {
+      "max_ngram_diff": 10,
       "number_of_shards": 1,
       "refresh_interval": "1s",
       "index.knn": true,
       "similarity": {
-        "answer_bm25": {
+        "low_b_bm25": {
           "type": "BM25",
-          "b": 0,
+          "b": 0.2,
           "k1": 1.2
         },
         "low_k1_bm25": {
@@ -22,11 +23,51 @@
             "tokenizer": "nori_tokenizer",
             "filter": ["lowercase", "nori_readingform", "nori_part_of_speech"]
           },
+          "ko_nori_mixed": {
+            "type": "custom",
+            "tokenizer": "nori_tokenizer",
+            "decompound_mode": "mixed",
+            "filter": ["lowercase", "nori_readingform", "nori_part_of_speech"]
+          },
           "search_analyzer": {
             "type": "custom",
             "tokenizer": "standard",
             "filter": [
               "lowercase"
+            ]
+          },
+          "ngram_analyzer": {
+            "type": "custom",
+            "tokenizer": "ngram_tokenizer",
+            "filter": [
+              "lowercase"
+            ]
+          },
+          "edge_ngram_analyzer": {
+            "type": "custom",
+            "tokenizer": "edge_ngram_tokenizer",
+            "filter": [
+              "lowercase"
+            ]
+          }
+        },
+        "tokenizer": {
+          "edge_ngram_tokenizer": {
+            "type": "edge_ngram",
+            "min_gram": 1,
+            "max_gram": 5,
+            "token_chars": [
+              "letter",
+              "digit"
+            ]
+          },
+          "ngram_tokenizer": {
+            "type": "ngram",
+            "min_gram": 1,
+            "max_gram": 5,
+            "token_chars": [
+              "letter",
+              "digit"
             ]
           }
         },
@@ -34,6 +75,18 @@
           "lower_norm": {
             "type": "custom",
             "filter": ["lowercase", "asciifolding"]
+          }
+        },
+        "filter": {
+          "nori_part_of_speech_filter": {
+            "type": "nori_part_of_speech",
+            "stoptags": [
+              "E", "IC", "J", "MAG", "MAJ",
+              "MM", "SP", "SSC", "SSO", "SC",
+              "SE", "XPN", "XSA", "XSN", "XSV",
+              "UNA", "NA", "VSV",
+              "VV", "VA"
+            ]
           }
         }
       }
@@ -99,11 +152,43 @@
         },
         "question": {
           "type": "text",
-          "analyzer": "ko_nori"
+          "analyzer": "ko_nori",
+          "fields": {
+            "ngram": {
+              "type": "text",
+              "analyzer": "ngram_analyzer",
+              "similarity": "low_b_bm25"
+            },
+            "edge_ngram": {
+              "type": "text",
+              "analyzer": "edge_ngram_analyzer",
+              "similarity": "low_b_bm25"
+            },
+            "ko_nori_mixed": {
+              "type": "text",
+              "analyzer": "ko_nori_mixed",
+              "similarity": "low_b_bm25"
+            }
+          }
         },
         "answer": {
           "type": "text",
-          "analyzer": "ko_nori"
+          "analyzer": "ko_nori",
+          "fields": {
+            "ngram": {
+              "type": "text",
+              "analyzer": "ngram_analyzer"
+            },
+            "edge_ngram": {
+              "type": "text",
+              "analyzer": "edge_ngram_analyzer"
+            },
+            "ko_nori_mixed": {
+              "type": "text",
+              "analyzer": "ko_nori_mixed",
+              "similarity": "low_b_bm25"
+            }
+          }
         },
         "created_date": {
           "type": "date",

@@ -54,7 +54,6 @@ def setup_logging(log_to_file: bool = False, log_dir: str = "./logs"):
             "request_id": {"()": RequestIDFilter}
         },
 
-        # ✅ 문자열이 아니라 dict로!
         "formatters": {
             "default": {
                 "format": "%(asctime)s %(levelname)s [%(name)s] [%(request_id)s] %(message)s"

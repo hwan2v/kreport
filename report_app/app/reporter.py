@@ -1,5 +1,4 @@
 import os
-import logging
 import sys
 import json
 import time
@@ -16,8 +15,62 @@ import csv
 import httpx
 import asyncio
 
+retry = Retry(
+    total=3,
+    backoff_factor=0.3,
+    status_forcelist=(429, 500, 502, 503, 504),
+    allowed_methods=("GET", "POST"),
+)
+adapter = HTTPAdapter(max_retries=retry, pool_connections=10, pool_maxsize=10)
 
-logger = logging.getLogger(__name__)
+class PipelineClient:
+    def __init__(self, base_url: str = "http://localhost:8000"):
+        self.base_url = base_url.rstrip("/")
+        self.session = requests.Session()
+        self.session.mount("http://", adapter)
+        self.session.headers.update({"Connection": "keep-alive"})
+
+    def close(self):
+        try:
+            self.session.close()
+        except Exception:
+            pass
+
+    def _post(self, endpoint: str, payload: dict):
+        url = f"{self.base_url}{endpoint}"
+        try:
+            response = self.session.post(url, json=payload, timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            print(f"Request failed for {url}: {e}")
+            return None
+
+    def run_pipeline(self, date: str):
+        payload = {"date": date}
+
+        print(f"day={date} Extract 단계 실행...")
+        extract_result = self._post("/api/extract", payload)
+        if not extract_result:
+            return {"error": "extract 실패"}
+
+        print(f"day={date} Transform 단계 실행...")
+        transform_result = self._post("/api/transform", payload)
+        if not transform_result:
+            return {"error": "transform 실패"}
+
+        print(f"day={date} Index 단계 실행...")
+        index_result = self._post("/api/index", payload)
+        if not index_result:
+            return {"error": "index 실패"}
+
+        # 결과 합치기
+        return {
+            "extract": extract_result,
+            "transform": transform_result,
+            "index": index_result
+        }
+
 
 class SearchReport:
     def __init__(
@@ -32,15 +85,7 @@ class SearchReport:
         self.answer_dict = {}
         # Reuse a single HTTP session for connection pooling/keep-alive
         self.session = requests.Session()
-        retry = Retry(
-            total=3,
-            backoff_factor=0.3,
-            status_forcelist=(429, 500, 502, 503, 504),
-            allowed_methods=("GET", "POST"),
-        )
-        adapter = HTTPAdapter(max_retries=retry, pool_connections=10, pool_maxsize=10)
         self.session.mount("http://", adapter)
-        self.session.mount("https://", adapter)
         self.session.headers.update({"Connection": "keep-alive"})
     
     
@@ -191,7 +236,7 @@ class SearchReport:
             wf.write(f"최종결과\t\t\t\t\t\t{true_count}\t{average_search_time}\n")
 
 
-    def _parse_search_result(self, search_result):
+    def _parse_search_result(self, search_result: Dict[str, Any]) -> List[str]:
         result = []
         hits = search_result["hits"]["hits"]
         for hit in hits:
@@ -202,20 +247,6 @@ class SearchReport:
                     contents.append(hit_dict[key].replace("\n", " "))
             result.append(" ".join(contents))
         return result
-            
-    def _build_query(self, question: str, size: int = 3):
-        body = {
-            "size": size,
-            "query": {
-                "multi_match": {
-                    "query": question,
-                    "fields": ["title", "body"],
-                    "type": "best_fields",
-                    "operator": "or"
-                }
-            }
-        }
-        return body
     
     async def call_api(self, client: httpx.AsyncClient, url: str, q: str, size: int = 3) -> dict:
         """단일 호출 + 예외 처리 + 상태코드 체크"""
@@ -229,8 +260,38 @@ class SearchReport:
             results = await asyncio.gather(*tasks)
         return results
 
+def run_report(args: argparse.Namespace):
+    search_report = SearchReport(
+        answer_file=args.answer_file,
+        count=args.count,
+        api_url=args.api_url)
+    
+    # 질문 파일 초기화
+    answer_dict = search_report.init_answer_file()
+    # 질문 검색
+    search_dict = search_report.search_answers(answer_dict)
+    #search_dict = asyncio.run(
+    #    search_report.search_answers_async(answer_dict, max_concurrency=20)
+    #)
+    # 리포트 생성
+    search_report.report_old(answer_dict, search_dict)
+    # close session
+    search_report.close()
+    
+    print(f"report success: {args.answer_file}")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--mode',
+        '-m', 
+        help='execution mode \
+            (clean: clean index, \
+            report: generate report, \
+            run_api: run api according to scenario)',
+        choices=['clean', 'report', 'run_api'],
+        default='report',
+        dest='mode')
     parser.add_argument(
         '--answer_file', 
         '-a',
@@ -250,31 +311,28 @@ if __name__ == "__main__":
         help='api url', 
         dest='api_url')
 
-    args = parser.parse_args()
     try:
-        logger.info(
-            f"report start: answer_file={args.answer_file} count={args.count} api_url={args.api_url}"
+        args = parser.parse_args()
+        print(
+            f"report start: mode={args.mode} answer_file={args.answer_file} count={args.count} api_url={args.api_url}"
         )
-        
-        search_report = SearchReport(
-            answer_file=args.answer_file,
-            count=args.count,
-            api_url=args.api_url
-        )
-        
-        # 질문 파일 초기화
-        answer_dict = search_report.init_answer_file()
-        # 질문 검색
-        search_dict = search_report.search_answers(answer_dict)
-        #search_dict = asyncio.run(
-        #    search_report.search_answers_async(answer_dict, max_concurrency=20)
-        #)
-        # 리포트 생성
-        search_report.report_old(answer_dict, search_dict)
-        # close session
-        search_report.close()
-        
-        logger.info(f"report success: {args.answer_file}")
+
+        if args.mode == 'clean':
+            res = requests.delete("http://localhost:9200/collection-*")
+            res.raise_for_status()
+            print(f"clean index success: {res.text}")
+
+        elif args.mode == 'run_api':
+            pipeline_client = PipelineClient()
+            pipeline_client.run_pipeline(date="1")
+            pipeline_client.run_pipeline(date="2")
+            pipeline_client.run_pipeline(date="3")
+            pipeline_client.close()
+            print("검색&리포트 단계 실행...")
+            run_report(args)
+            
+        elif args.mode == 'report':
+            run_report(args)
     except Exception as e:
         logger.error(f"failed to report: {e}")
         traceback.print_exc()

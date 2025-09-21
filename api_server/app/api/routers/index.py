@@ -1,11 +1,8 @@
 from fastapi import APIRouter, Depends
-from api_server.app.security.guards import require_api_key
-from api_server.app.api.deps import get_pipeline_resolver, PipelineResolver
 from pydantic import BaseModel, Field
+from api_server.app.api.deps import get_pipeline_resolver, PipelineResolver
 from api_server.app.domain.utils import choose_collection
 from api_server.app.domain.models import FileType
-
-from api_server.app.domain.services.search_service import SearchService
 
 router = APIRouter(prefix="/index", tags=["index"])# dependencies=[Depends(require_api_key)])
 

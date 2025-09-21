@@ -1,3 +1,7 @@
+"""
+HTML에서 제목/문단/리스트/헤딩을 뽑아 NormalizedChunk로 변환하는 구현체.
+    
+"""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -9,7 +13,7 @@ from api_server.app.domain.utils import infer_date_from_path
 from api_server.app.domain.ports import TransformPort
 from api_server.app.domain.models import ParsedDocument, NormalizedChunk
 
-class HtmlTransformer(TransformPort):
+class WikiTransformer(TransformPort):
     """
     ParsedDocument(HTML) → NormalizedChunk 한 건.
     - 문단 블록(text)들을 합쳐 body를 구성
@@ -29,6 +33,13 @@ class HtmlTransformer(TransformPort):
         self.joiner = joiner
 
     def read_parsed_document(self, resource_file_path: str) -> Iterable[ParsedDocument]:
+        """
+        HTML 파일을 읽어 ParsedDocument로 변환하는 메서드.
+        Args:
+            resource_file_path: str
+        Returns:
+            Iterable[ParsedDocument]
+        """
         docs: List[ParsedDocument] = []
         with open(resource_file_path, "r", encoding="utf-8") as f:
             for line in f:
@@ -50,7 +61,7 @@ class HtmlTransformer(TransformPort):
                     features[b.type] = features.get(b.type, 0) + len(b.text)
             raw_features[doc.title] = features
 
-        # 2) 각 feature별 전체 min/max 구하기
+        # 각 feature별 전체 min/max 구하기
         mins = {k: float("inf") for k in feature_keys}
         maxs = {k: float("-inf") for k in feature_keys}
 
@@ -62,13 +73,13 @@ class HtmlTransformer(TransformPort):
                 if v > maxs[k]:
                     maxs[k] = v
 
-        # 3) 스케일링 적용 (0~1 범위)
+        # 스케일링 적용 (0~1 범위)
         scaled_features = {}
         for title, fdict in raw_features.items():
             scaled = {}
             for k in feature_keys:
                 v = fdict.get(k, 0)
-                if maxs[k] == mins[k]:  # 모든 값이 같으면 0으로
+                if maxs[k] == mins[k]:
                     scaled[k] = 0.0
                 else:
                     scaled[k] = (v - mins[k]) / (maxs[k] - mins[k])
@@ -81,9 +92,10 @@ class HtmlTransformer(TransformPort):
         pattern = r"(\d+\.\d)%"
 
         def repl(match: re.Match) -> str:
-            # 그룹1 = "22.1"
+            # 81번 질문
+            # 소수점을 그룹1로 추출하여 소수점 둘째 자리까지 포맷 변환
             value = float(match.group(1))
-            return f"{value:.2f}%"   # 소수점 둘째 자리까지 포맷
+            return f"{value:.2f}%"
 
         return re.sub(pattern, repl, text)
 
@@ -92,7 +104,7 @@ class HtmlTransformer(TransformPort):
         result = []
         num = 0
         for doc in docs:
-            # 1) 본문 조립
+            # 본문 추출
             for b in doc.blocks:
                 if b.type == "body":
                     body = self._normalize_percentage(b.text)
@@ -103,7 +115,7 @@ class HtmlTransformer(TransformPort):
                 elif b.type == "paragraph":
                     paragraph = self._normalize_percentage(b.text)
 
-            # 2) 메타 채우기(필요 시 doc.meta에서 author/date를 파싱하도록 확장 가능)
+            # 메타 채우기(필요 시 doc.meta에서 author/date를 파싱하도록 확장 가능)
             created_date = infer_date_from_path(doc.source.uri)
             title = doc.title
             author = self.default_author
@@ -113,7 +125,7 @@ class HtmlTransformer(TransformPort):
             source_id = f"{self.default_source_id}_{num}"
             num += 1
 
-            # 3) NormalizedChunk 생성 (한 건)
+            # NormalizedChunk 생성성
             chunk = NormalizedChunk(
                 source_id=source_id,
                 source_path=source_path,

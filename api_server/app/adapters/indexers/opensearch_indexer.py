@@ -5,7 +5,7 @@ from typing import Iterable, Any, List, Dict, Tuple
 import re
 from opensearchpy import OpenSearch, helpers
 from api_server.app.domain.ports import IndexPort
-from api_server.app.domain.models import NormalizedChunk, IndexResult, IndexErrorItem
+from api_server.app.domain.models import NormalizedChunk, IndexResult, IndexErrorItem, AliasResult
 
 class OpenSearchIndexer(IndexPort):
     """NormalizedChunk들을 OpenSearch에 bulk 적재하는 어댑터."""
@@ -20,12 +20,11 @@ class OpenSearchIndexer(IndexPort):
         schema_path = os.path.join(os.path.dirname(__file__), "../../../resources/schema/search_index.json")
         with open(schema_path, 'r', encoding='utf-8') as f:
             self.index_schema = json.load(f)
-            print(self.index_schema)
     
     def _create_index_name(self, source: str, index_date: str) -> str:
         return f"{self.prefix_index_name}-{source}-{index_date}"
         
-    def create_index(self, source: str, index_date: str) -> None:
+    def create_index(self, source: str, index_date: str) -> str:
         """Create index using the loaded schema."""
         index_name = self._create_index_name(source, index_date)
         if self.client.indices.exists(index=index_name):
@@ -36,7 +35,7 @@ class OpenSearchIndexer(IndexPort):
         print(f"Index '{index_name}' created successfully.")
         return index_name
 
-    def index(self, index_name: str, resource_file_path: str) -> None:
+    def index(self, index_name: str, resource_file_path: str) -> IndexResult:
         chunks: List[NormalizedChunk] = []
         with open(resource_file_path, "r", encoding="utf-8") as f:
             for line in f:
@@ -92,7 +91,11 @@ class OpenSearchIndexer(IndexPort):
                 print(f"Index '{index_name}' does not exist.")
         return alias_name
 
-    def rotate_alias_to_latest(self, alias_name: str, base_prefix: str, delete_old: bool = True) -> List[str]:
+    def rotate_alias_to_latest(
+        self, 
+        alias_name: str, 
+        base_prefix: str, 
+        delete_old: bool = True) -> AliasResult:
         """
         Rotate alias to point to the latest versioned indices and (optionally) delete older indices.
 
@@ -170,4 +173,7 @@ class OpenSearchIndexer(IndexPort):
                 except Exception as e:
                     print(f"Failed to delete index '{idx}': {e}")
 
-        return latest_indices
+        return AliasResult(
+            index_name=latest_indices,
+            alias_name=alias_name
+        )

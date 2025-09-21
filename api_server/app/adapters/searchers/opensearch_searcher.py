@@ -1,10 +1,10 @@
 from __future__ import annotations
+
 import json
 import os
-from typing import Iterable, Any, Dict
-from opensearchpy import OpenSearch, helpers
+from typing import Any, Dict
+from opensearchpy import OpenSearch
 from api_server.app.domain.ports import SearchPort
-from api_server.app.domain.models import NormalizedChunk, IndexResult, IndexErrorItem
 
 class OpenSearchSearcher(SearchPort):
     """NormalizedChunk들을 OpenSearch에 bulk 적재하는 어댑터."""
@@ -12,11 +12,16 @@ class OpenSearchSearcher(SearchPort):
         self.client = client
         self.alias_name = alias_name
 
-    def search(self, query: str, size: int = 3, explain: bool = False) -> [NormalizedChunk]:
+    def search(self, query: str, size: int = 3, explain: bool = False) -> Any:
         body = self._build_query(query, size=size, explain=explain)
         return self.client.search(index=self.alias_name, body=body)
 
-    def _build_query(self, query: str, size: int = 3, explain: bool = False, min_score: float = 5) -> Dict[str, Any]:
+    def _build_query(
+        self, 
+        query: str, 
+        size: int = 3, 
+        explain: bool = False, 
+        min_score: float = 5) -> Dict[str, Any]:
         """
         title, body 양쪽을 대상으로 keyword 검색 후 상위 N개 반환.
         Args:
@@ -64,6 +69,14 @@ class OpenSearchSearcher(SearchPort):
                                         "boost": 2.5
                                     }
                                 },
+                                # {
+                                #     "multi_match": {
+                                #         "query": query,
+                                #         "fields": ["question.ko_nori_mixed", "question.ngram"],
+                                #         "type": "best_fields",
+                                #         "operator": "or"
+                                #     }
+                                # },
                                 {
                                     "match": {
                                         "infobox": {

@@ -117,27 +117,6 @@ class NormalizedChunk(BaseModel):
     author: str | None = Field(None, description="작성자(정확 매칭/집계용)")
     published: bool = Field(True, description="공개 여부")
 
-
-class NormalizedChunk2(BaseModel):
-    """
-    인덱싱 단위 청크.
-    - 컬렉션/문서/시퀀스 기준으로 문서를 “쪼갠” 레코드
-    - OpenSearch 문서 1건에 해당
-    """
-    collection: str = Field(..., description="컬렉션 이름(논리 파티션 키)")
-    doc_id: str = Field(..., description="원문 문서 식별자(URI 해시 등)")
-    seq: int = Field(..., ge=0, description="문서 내 청크 순번(0부터)")
-    title: str | None = Field(None, description="문서/청크 타이틀")
-    content: str = Field(..., description="검색/색인 대상 본문")
-    url: HttpUrl | None = Field(None, description="원문 접근 URL(있다면)")
-    lang: str | None = Field(None, description="언어 코드")
-    meta: JSONDict = Field(default_factory=dict, description="추가 메타(작성자/태그 등)")
-    # 선택: 임베딩 사용 시
-    embedding: list[float] | None = Field(
-        default=None, description="벡터 검색을 쓸 때만 채움"
-    )
-
-
 class IndexErrorItem(BaseModel):
     """인덱싱 실패 항목 요약."""
     doc_id: str
@@ -149,3 +128,9 @@ class IndexResult(BaseModel):
     """인덱싱 실행 결과."""
     indexed: int = Field(..., ge=0)
     errors: list[IndexErrorItem] = Field(default_factory=list)
+
+
+class AliasResult(BaseModel):
+    """alias 실행 결과."""
+    index_name: list[str] = Field(default_factory=list)
+    alias_name: str = Field(..., description="alias 이름")

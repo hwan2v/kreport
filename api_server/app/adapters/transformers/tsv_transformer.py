@@ -1,3 +1,7 @@
+"""
+TSV에서 질문/답변을 뽑아 NormalizedChunk로 변환하는 구현체.
+"""
+
 from __future__ import annotations
 from datetime import datetime, timezone, timedelta
 from typing import Iterable, List
@@ -9,7 +13,7 @@ from api_server.app.domain.models import ParsedDocument, NormalizedChunk
 
 class TsvTransformer(TransformPort):
     """
-    TSV ParsedDocument → NormalizedChunk[*]
+    TSV ParsedDocument → NormalizedChunk[]
     (※ 기존 TransformPort가 NormalizedChunk를 반환했다면,
        이 구현은 NormalizedChunk 반환하도록 프로젝트에 맞춰 인터페이스를 살짝 조정하거나
        Indexer에서 dict/NormalizedChunk 모두 처리하게 만들어도 됩니다.)
@@ -19,6 +23,13 @@ class TsvTransformer(TransformPort):
         self.default_source_id = default_source_id
 
     def read_parsed_document(self, resource_file_path: str) -> Iterable[ParsedDocument]:
+        """
+        TSV 파일을 읽어 ParsedDocument로 변환하는 메서드.
+        Args:
+            resource_file_path: str
+        Returns:
+            Iterable[ParsedDocument]
+        """
         with open(resource_file_path, "r", encoding="utf-8") as f:
             payload = json.load(f)
 

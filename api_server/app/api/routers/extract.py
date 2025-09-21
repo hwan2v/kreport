@@ -1,4 +1,3 @@
-# app/api/routers/extract.py
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from api_server.app.api.deps import get_pipeline_resolver, PipelineResolver

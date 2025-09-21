@@ -3,7 +3,6 @@ from pydantic import BaseModel, Field
 from api_server.app.api.deps import get_search_service, SearchService
 from api_server.app.platform.config import settings
 from api_server.app.security.guards import require_api_key
-from typing import Optional
 
 router = APIRouter(prefix="/search", tags=["search"])# dependencies=[Depends(require_api_key)])
 
@@ -15,6 +14,5 @@ class SearchRequest(BaseModel):
 
 @router.post("", summary="문서 추출 후 저장")
 def search(req: SearchRequest, svc: SearchService = Depends(get_search_service)):
-    print(req)
     result = svc.search(query=req.query, size=req.size, explain=req.explain)
     return {"success": True, "message": "검색 성공", "data": result}

@@ -1,3 +1,7 @@
+"""
+HTML에서 제목/문단/리스트/헤딩을 뽑아 ParsedDocument로 변환하는 구현체.
+"""
+
 from __future__ import annotations
 from typing import Sequence
 from bs4 import BeautifulSoup
@@ -16,6 +20,7 @@ class WikiParser(ParsePort):
         ".catlinks", ".navbox", ".metadata", ".hatnote", ".mw-editsection",
     ]
 
+    # 필수 추출 셀렉터 딕셔너리
     _MANDATORY_SELECTOR_DICT = {
         "infobox": "#mw-content-text > div.mw-content-ltr.mw-parser-output > table > tbody",
         "paragraph": "mw-heading mw-heading2",
@@ -24,21 +29,26 @@ class WikiParser(ParsePort):
     }
 
     def parse(self, raw: RawDocument) -> ParsedDocument:
+        """
+        Args:
+            raw: RawDocument
+        Returns:
+            ParsedDocument
+        """
         html = raw.body_text or ""
         soup = BeautifulSoup(html, "lxml")
 
         blocks: list[ParsedBlock] = []
 
-        # 1) title/lang
+        # title/lang
         title_tag = soup.select_one("h1") or soup.select_one("title")
         title = title_tag.get_text(strip=True) if title_tag else None
         lang = (soup.html.get("lang") if soup.html else None) or None
 
-        # 2) 불필요한 요소 제거
-        for sel in self._STRIP_SELECTORS:
-            for el in soup.select(sel):
-                el.decompose()
-
+        # 불필요한 요소 제거
+        self._delete_unnecessary_elements(soup)
+        
+        # 필수 추출 셀렉터 딕셔너리에 따라 추출
         blocks.append(self._parse_infobox_from(soup, self._MANDATORY_SELECTOR_DICT["infobox"]))
         blocks.append(self._parse_summary_from(soup, self._MANDATORY_SELECTOR_DICT["summary"]))
         blocks.append(self._parse_paragraph_from(soup, self._MANDATORY_SELECTOR_DICT["paragraph"]))
@@ -55,12 +65,26 @@ class WikiParser(ParsePort):
             collection=raw.collection
         )
 
+    def _delete_unnecessary_elements(self, soup: BeautifulSoup) -> None:
+        """
+        Args:
+            soup: BeautifulSoup
+        """
+        for sel in self._STRIP_SELECTORS:
+            for el in soup.select(sel):
+                el.decompose()
+
     def _parse_body_if_blocks_is_empty(
         self, 
         soup: BeautifulSoup,
         blocks: list[ParsedBlock]
     ) -> None:
-        # 아무것도 못 뽑았으면 전체 텍스트를 body로 추가
+        """
+            아무것도 못 뽑았으면 전체 텍스트를 body로 추가
+        Args:
+            soup: BeautifulSoup
+            blocks: list[ParsedBlock]
+        """
         if not blocks:
             page_text = soup.get_text(" ", strip=True)
             if page_text:
@@ -71,6 +95,13 @@ class WikiParser(ParsePort):
         soup: BeautifulSoup, 
         selector: str
     ) -> ParsedBlock:
+        """
+        Args:
+            soup: BeautifulSoup
+            selector: str
+        Returns:
+            ParsedBlock
+        """
         contents = []
         content_root: Tag = soup.select_one("#mw-content-text") or soup.body or soup
         for h in content_root.select("h1, h2, h3, h4, h5, h6"):
@@ -78,19 +109,19 @@ class WikiParser(ParsePort):
             if text:
                 contents.append(text)
 
-        # 5) 문단
+        # 문단
         for p in content_root.select("p"):
             text = p.get_text()
             if text:
                 contents.append(text)
 
-        # 6) 리스트 항목도 문단으로
+        # 리스트 항목도 문단으로
         for li in content_root.select("ul li, ol li"):
             text = li.get_text(" ", strip=True)
             if text:
                 contents.append(text)
 
-        # 7) 테이블 캡션/요약 텍스트(필요 시)
+        # 테이블 요약 텍스트
         for cap in content_root.select("table"):
             text = cap.get_text(" ", strip=True)
             if text:
@@ -103,6 +134,13 @@ class WikiParser(ParsePort):
         soup: BeautifulSoup, 
         selector: str
     ) -> ParsedBlock:
+        """
+        Args:
+            soup: BeautifulSoup
+            selector: str
+        Returns:
+            ParsedBlock
+        """
         target = soup.select_one(selector)
         if target:
             return ParsedBlock(type="infobox", text=target.get_text(" ", strip=True))
@@ -113,7 +151,14 @@ class WikiParser(ParsePort):
         soup: BeautifulSoup, 
         selector: str
     ) -> list[ParsedBlock]:
-        # 5) summary 선택 선택자 추출
+        """
+        Args:
+            soup: BeautifulSoup
+            selector: str
+        Returns:
+            list[ParsedBlock]
+        """
+        # summary 선택 선택자 추출
         summary_result = []
         container = soup.find("div", class_=selector)
         table = container.find("table", class_="infobox vcard")
@@ -137,6 +182,13 @@ class WikiParser(ParsePort):
         selector: str, 
         filter_heading: list[str] = ['각주', '외부 링크', '같이 보기', '관련 서적', '목차']
     ) -> list[ParsedBlock]:
+        """
+        Args:
+            soup: BeautifulSoup
+            selector: str
+        Returns:
+            list[ParsedBlock]
+        """
         # paragraph 선택 선택자 추출
         paragraph_result = {}
         # div.mw-heading.mw-heading2 각각 순회
