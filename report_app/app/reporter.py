@@ -3,17 +3,18 @@ import sys
 import json
 import time
 import argparse
-from typing import Dict, List, Union, Any
-from urllib.parse import urlparse
-from datetime import datetime
 import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 import re
 import traceback
 import csv
 import httpx
 import asyncio
+from typing import Dict, List, Union, Any
+from datetime import datetime
+from requests.adapters import HTTPAdapter
+from urllib.parse import urlparse
+from urllib3.util.retry import Retry
+
 
 retry = Retry(
     total=3,
@@ -23,11 +24,14 @@ retry = Retry(
 )
 adapter = HTTPAdapter(max_retries=retry, pool_connections=10, pool_maxsize=10)
 
+COLUMN_COUNT_MAX = 3
+COLUMN_COUNT_MIN = 2
+
 class PipelineClient:
     def __init__(self, base_url: str = "http://localhost:8000"):
         self.base_url = base_url.rstrip("/")
         self.session = requests.Session()
-        self.session.mount("http://", adapter)
+        self.session.mount(base_url, adapter)
         self.session.headers.update({"Connection": "keep-alive"})
 
     def close(self):
@@ -83,10 +87,13 @@ class SearchReport:
         self.count = count
         self.api_url = api_url
         self.answer_dict = {}
-        # Reuse a single HTTP session for connection pooling/keep-alive
         self.session = requests.Session()
-        self.session.mount("http://", adapter)
         self.session.headers.update({"Connection": "keep-alive"})
+        self.session.mount(self.api_url, adapter)
+        try:
+            self.session.get(f"{self.api_url}/api/health", timeout=3)
+        except Exception:
+            pass
     
     
     def init_answer_file(self, answer_file_path: str = None):
@@ -104,11 +111,11 @@ class SearchReport:
             reader = csv.reader(f, delimiter="\t")
             next(reader)
             for row in reader:
-                if len(row) > 3:
+                if len(row) > COLUMN_COUNT_MAX:
                     continue
                 no = int(row[0].strip())
                 question = row[1].strip()
-                answer = row[2].strip() if len(row) > 2 else ""
+                answer = row[2].strip() if len(row) > COLUMN_COUNT_MIN else ""
                 answer_dict[no] = {
                     "question": question,
                     "answer": answer
@@ -141,20 +148,44 @@ class SearchReport:
             pass
 
     
-    def report(self, answer_dict: Dict[int, str], search_dict: Dict[int, Dict[str, Any]], output_file_path: str = None):
-        def sanitize(v: Any, keep_newlines: bool = True) -> str:
-            """TSV 안전화를 위한 전처리: 탭 제거, (선택) 개행 유지/제거."""
-            if v is None:
-                return ""
+    def sanitize(
+        self, 
+        v: Any, 
+        keep_newlines: bool = True, 
+        max_len: int | None = None, 
+        soft_wrap_every: int | None = None) -> str:
+        """
+        TSV 안전화를 위한 전처리:
+        - 탭 제거
+        - (옵션) 개행 유지/제거
+        - (옵션) 길이 제한
+        - (옵션) 소프트 래핑(제로폭 공백 주입)으로 엑셀에서 줄바꿈 유도
+        """
+        if v is None:
+            s = ""
+        else:
             s = str(v)
-            s = s.replace("\t", " ")  # 탭은 반드시 공백으로
-            if keep_newlines:
-                # 개행은 셀 내부 줄바꿈으로 남김 (Excel에서도 한 셀로 보임)
-                return s
-            else:
-                # 행 밀림이 싫고, 한 줄로만 보이길 원하면 개행 제거
-                return s.replace("\r\n", " ").replace("\r", " ").replace("\n", " ")
 
+        # 탭은 반드시 공백으로 치환(구분자 깨짐 방지)
+        s = s.replace("\t", " ")
+
+        if not keep_newlines:
+            s = s.replace("\r\n", " ").replace("\r", " ").replace("\n", " ")
+
+        if max_len is not None and len(s) > max_len:
+            s = s[:max_len] + "…"
+
+        if soft_wrap_every:
+            # 연속 긴 문자열 줄바꿈 유도(제로폭 공백 삽입)
+            ZWSP = "\u200b"
+            s = "".join(
+                ch + (ZWSP if (i + 1) % soft_wrap_every == 0 else "")
+                for i, ch in enumerate(s)
+            )
+
+        return s
+        
+    def report_v1(self, answer_dict: Dict[int, str], search_dict: Dict[int, Dict[str, Any]], output_file_path: str = None):
         true_count = 0
         total_search_time = 0.0
         report_file_path = output_file_path if output_file_path else self.answer_file.replace('.tsv', '_result.tsv')
@@ -164,10 +195,10 @@ class SearchReport:
             writer = csv.writer(
                 wf,
                 delimiter="\t",
-                lineterminator="\r\n",   # CRLF
+                lineterminator="\r\n",
                 quotechar='"',
                 escapechar="\\",
-                doublequote=True
+                doublequote=False
             )
 
             # 헤더
@@ -194,48 +225,23 @@ class SearchReport:
                 result_3 = parsed_search_results[2] if len(parsed_search_results) > 2 else ""
 
                 writer.writerow([
-                    sanitize(no, keep_newlines=False),             # 번호는 개행 불필요
-                    sanitize(question, keep_newlines=True),        # 긴 텍스트는 셀 내 줄바꿈 허용
-                    sanitize(answer, keep_newlines=True),
-                    sanitize(result_1, keep_newlines=True),
-                    sanitize(result_2, keep_newlines=True),
-                    sanitize(result_3, keep_newlines=True),
-                    sanitize(is_contain_answer, keep_newlines=False),
-                    sanitize(search_time, keep_newlines=False),
+                    self.sanitize(no, keep_newlines=False),
+                    self.sanitize(question, keep_newlines=True, soft_wrap_every=80, max_len=4000),
+                    self.sanitize(answer, keep_newlines=True, soft_wrap_every=80, max_len=4000),
+                    self.sanitize(result_1, keep_newlines=True, soft_wrap_every=80, max_len=4000),
+                    self.sanitize(result_2, keep_newlines=True, soft_wrap_every=80, max_len=4000),
+                    self.sanitize(result_3, keep_newlines=True, soft_wrap_every=80, max_len=4000),
+                    self.sanitize(is_contain_answer, keep_newlines=False),
+                    self.sanitize(search_time, keep_newlines=False),
                 ])
 
             avg = (total_search_time / max(len(answer_dict), 1))
             writer.writerow([
                 "최종결과", "", "", "", "", "",
-                sanitize(true_count, keep_newlines=False),
-                sanitize(avg, keep_newlines=False),
+                self.sanitize(true_count, keep_newlines=False),
+                self.sanitize(avg, keep_newlines=False),
             ])
-
-
-
-    def report_old(self, answer_dict: dict, search_dict: dict, output_file_path: str = None):
-        true_count = 0
-        total_search_time = 0
-        report_file_path = output_file_path if output_file_path else self.answer_file.replace('.tsv', '_result.tsv')
-        with open(report_file_path, 'w', encoding='utf-8') as wf:
-            wf.write('\t질문\t필수 포함 text\t검색된 text 1\t검색된 text 2\t검색된 text 3\t정답 포함 여부\t속도\n')
-            for no, answer_obj in answer_dict.items():
-                question = answer_obj["question"]
-                answer = answer_obj["answer"]
-                search_result = search_dict[no]["search_result"]
-                search_time = search_dict[no]["search_time"]
-                parsed_search_results = self._parse_search_result(search_result)
-                is_contain_answer = "true" if len(parsed_search_results) > 0 and answer in parsed_search_results[0] else "false"
-                true_count += 1 if is_contain_answer == "true" else 0
-                total_search_time += search_time
-                result_1 = parsed_search_results[0] if len(parsed_search_results) > 0 else ""
-                result_2 = parsed_search_results[1] if len(parsed_search_results) > 1 else ""
-                result_3 = parsed_search_results[2] if len(parsed_search_results) > 2 else ""
-                wf.write(f'{no}\t{question}\t{answer}\t{result_1}\t{result_2}\t{result_3}\t{is_contain_answer}\t{search_time}\n')
-            average_search_time = total_search_time / len(answer_dict)
-            wf.write(f"최종결과\t\t\t\t\t\t{true_count}\t{average_search_time}\n")
-
-
+    
     def _parse_search_result(self, search_result: Dict[str, Any]) -> List[str]:
         result = []
         hits = search_result["hits"]["hits"]
@@ -250,17 +256,30 @@ class SearchReport:
     
     async def call_api(self, client: httpx.AsyncClient, url: str, q: str, size: int = 3) -> dict:
         """단일 호출 + 예외 처리 + 상태코드 체크"""
+        start_time = datetime.now()
         r = await client.post(f"{url}/api/search", json={"query": q, "size": size}, timeout=10)
+        elapsed = (datetime.now() - start_time).total_seconds()
         r.raise_for_status()
-        return r.json()
+        return {
+            "json": r.json(),
+            "elapsed": elapsed
+        }
     
     async def search_answers_async(self, answer_dict: dict, max_concurrency: int = 20) -> dict:
         async with httpx.AsyncClient() as client:
             tasks = [self.call_api(client, self.api_url, obj["question"]) for no, obj in answer_dict.items()]
             results = await asyncio.gather(*tasks)
-        return results
+        search_dict = {}
+        for no, response in enumerate(results):
+            no = no + 1
+            search_result = response['json']['data']
+            search_dict[no] = {
+                "search_result": search_result,
+                "search_time": response['elapsed']
+            }
+        return search_dict
 
-def run_report(args: argparse.Namespace):
+def run_report(args):
     search_report = SearchReport(
         answer_file=args.answer_file,
         count=args.count,
@@ -274,7 +293,7 @@ def run_report(args: argparse.Namespace):
     #    search_report.search_answers_async(answer_dict, max_concurrency=20)
     #)
     # 리포트 생성
-    search_report.report_old(answer_dict, search_dict)
+    search_report.report_v1(answer_dict, search_dict)
     # close session
     search_report.close()
     
@@ -330,11 +349,14 @@ if __name__ == "__main__":
             pipeline_client.close()
             print("검색&리포트 단계 실행...")
             run_report(args)
-            
+
         elif args.mode == 'report':
+            start_time = datetime.now()
             run_report(args)
+            end_time = datetime.now()
+            print(f"report success: time={(end_time - start_time).total_seconds()} seconds")
     except Exception as e:
-        logger.error(f"failed to report: {e}")
+        print(f'error: {e}')
         traceback.print_exc()
         sys.exit(1)
     sys.exit(0)
