@@ -58,7 +58,7 @@ def test_extract_single_tsv(client, svc_html, svc_tsv):
     """
     source=tsv 이면 TSV용 서비스만 호출되고, 컬렉션 매핑은 qna 이어야 한다.
     """
-    r = client.post("/api/extract", json={"source": "tsv", "date": "3"})
+    r = client.post("/v1/extract", json={"source": "tsv", "date": "3"})
     assert r.status_code == 200
     body = r.json()
     assert body["success"] is True
@@ -75,7 +75,7 @@ def test_extract_single_html(client, svc_html, svc_tsv):
     source=html 이면 HTML용 서비스만 호출되고, 컬렉션 매핑은 wiki 이어야 한다.
     """
     svc_html.extract.side_effect = None
-    r = client.post("/api/extract", json={"source": "html", "date": "3"})
+    r = client.post("/v1/extract", json={"source": "html", "date": "3"})
     assert r.status_code == 200
     body = r.json()
     assert body["success"] is True
@@ -91,7 +91,7 @@ def test_extract_all_calls_both_and_returns_last(client, svc_html, svc_tsv):
     호출 결과, html과 tsv 두 처리 결과(파일명)가 data에 담겨 반환된다.
     """
     svc_html.extract.side_effect = None
-    r = client.post("/api/extract", json={"source": "all", "date": "3"})
+    r = client.post("/v1/extract", json={"source": "all", "date": "3"})
     assert r.status_code == 200
     body = r.json()
     assert body["success"] is True
@@ -111,7 +111,7 @@ def test_extract_invalid_date_returns_404(client, svc_html, svc_tsv):
         resource="html/day_5",
         detail="No files for date=5",
     )
-    r = client.post("/api/extract", json={"source": "html", "date": "5"})
+    r = client.post("/v1/extract", json={"source": "html", "date": "5"})
     assert r.status_code == 404
 
     body = r.json()
@@ -129,7 +129,7 @@ def test_extract_invalid_date_returns_404(client, svc_html, svc_tsv):
         resource="html/day_5",
         detail="No files for date=5",
     )
-    r = client.post("/api/extract", json={"source": "html", "date": "5"})
+    r = client.post("/v1/extract", json={"source": "html", "date": "5"})
     assert r.status_code == 404
 
     body = r.json()
@@ -144,7 +144,7 @@ def test_extract_invalid_source_returns_422(client, svc_html, svc_tsv):
     잘못된 source 값을 넣으면 라우터 내부에서 FileType(...) 변환 시 ValueError가 발생하여 422 리턴
     (엔드포인트 구현에 try/except가 없기 때문)
     """
-    r = client.post("/api/extract", json={"source": "pdf", "date": "3"})
+    r = client.post("/v1/extract", json={"source": "pdf", "date": "3"})
     # 422 Unprocessable Entity 반환환
     assert r.status_code == 422
 
@@ -159,7 +159,7 @@ def test_extract_unknown_error_returns_400(client, svc_html, svc_tsv):
     임의 DomainError 예외가 발생시켜 400 리턴
     """
     svc_html.extract.side_effect = DomainError("unknown error")
-    r = client.post("/api/extract", json={"source": "html", "date": "3"})
+    r = client.post("/v1/extract", json={"source": "html", "date": "3"})
     assert r.status_code == 400
 
     body = r.json()

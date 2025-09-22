@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from typing import Literal, Dict, Any
 from api_server.app.api.deps import get_pipeline_resolver, PipelineResolver
 from api_server.app.domain.utils import choose_collection
-from api_server.app.domain.models import FileType, ApiResponse
+from api_server.app.domain.models import FileType
 import logging
 logger = logging.getLogger(__name__)
 
@@ -17,6 +17,18 @@ class IndexRequest(BaseModel):
     # all | html | tsv
     source: Literal["all", "html", "tsv"] = Field("all", description="default: all (html|tsv)")
     date: str = Field(..., description="날짜(예: '3')")
+
+class ApiResponse(BaseModel):
+    """
+    문서 추출 응답
+    """
+    success: bool = Field(..., description="성공 여부")
+    message: str = Field(..., description="결과 메시지")
+    # 키: 'html' 또는 'tsv' (source=all인 경우 두 키 모두 존재)
+    data: Dict[str, Any] = Field(
+        ...,
+        description="타입별 결과 딕셔너리. 내부 구조는 작업 타입에 따라 상이"
+    )
 
 def _run_index_one(resolver: PipelineResolver, ft: FileType, date: str) -> Any:
     """파일 타입 1개에 대해 index 실행."""

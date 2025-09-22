@@ -64,7 +64,7 @@ def test_index_single_tsv(client, svc_html, svc_tsv):
     """
     source=tsv 이면 TSV용 서비스만 호출되고, 컬렉션 매핑은 qna 이어야 한다.
     """
-    r = client.post("/api/index", json={"source": "tsv", "date": "3"})
+    r = client.post("/v1/index", json={"source": "tsv", "date": "3"})
     assert r.status_code == 200
     body = r.json()
     assert body["success"] is True
@@ -82,7 +82,7 @@ def test_index_single_html(client, svc_html, svc_tsv):
     source=html 이면 HTML용 서비스만 호출되고, 컬렉션 매핑은 wiki 이어야 한다.
     """
     svc_html.index.side_effect = None
-    r = client.post("/api/index", json={"source": "html", "date": "3"})
+    r = client.post("/v1/index", json={"source": "html", "date": "3"})
     assert r.status_code == 200
     body = r.json()
     assert body["success"] is True
@@ -100,7 +100,7 @@ def test_index_all_calls_both_and_returns_last(client, svc_html, svc_tsv):
     html, tsv 두 색인 결과(색인명)가 data에 담겨 반환된다.
     """
     svc_html.index.side_effect = None
-    r = client.post("/api/index", json={"source": "all", "date": "3"})
+    r = client.post("/v1/index", json={"source": "all", "date": "3"})
     assert r.status_code == 200
     body = r.json()
     assert body["success"] is True
@@ -117,7 +117,7 @@ def test_index_invalid_source_returns_500(client, svc_html, svc_tsv):
     """
     잘못된 source 값은 FileType(...) 캐스팅에서 ValueError -> 422을 반환.
     """
-    r = client.post("/api/index", json={"source": "pdf", "date": "3"})
+    r = client.post("/v1/index", json={"source": "pdf", "date": "3"})
     assert r.status_code == 422
 
     svc_html.index.assert_not_called()
@@ -132,7 +132,7 @@ def test_index_not_found_resource_returns_404(client, svc_html, svc_tsv):
         resource="html/day_4",
         detail="No files for date=4",
     )
-    r = client.post("/api/index", json={"source": "html", "date": "4"})
+    r = client.post("/v1/index", json={"source": "html", "date": "4"})
     assert r.status_code == 404
 
     svc_html.index.assert_called_once_with(source="html", date="4", collection=Collection.wiki)
@@ -144,7 +144,7 @@ def test_index_connection_error_returns_500(client, svc_html, svc_tsv):
     ConnectionError 예외가 발생하면 500 리턴
     """
     svc_html.index.side_effect = ConnectionError("opensearch down")
-    r = client.post("/api/index", json={"source": "html", "date": "4"})
+    r = client.post("/v1/index", json={"source": "html", "date": "4"})
     assert r.status_code == 500
 
     svc_html.index.assert_called_once_with(source="html", date="4", collection=Collection.wiki)

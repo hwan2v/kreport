@@ -55,10 +55,10 @@ app = FastAPI(
     version="1.0.0"
 )
 app.include_router(health.router)
-app.include_router(extract.router, prefix="/api")
-app.include_router(transform.router, prefix="/api")
-app.include_router(index.router, prefix="/api")
-app.include_router(search.router, prefix="/api")
+app.include_router(extract.router, prefix="/v1")
+app.include_router(transform.router, prefix="/v1")
+app.include_router(index.router, prefix="/v1")
+app.include_router(search.router, prefix="/v1")
 
 # Global Exception Filter
 app.add_exception_handler(HTTPException, http_exception_handler)

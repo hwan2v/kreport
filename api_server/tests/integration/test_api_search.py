@@ -39,7 +39,7 @@ def test_search_defaults(client, mock_search_service):
     """
     mock_search_service.search.side_effect = None
     payload = {"query": "카카오뱅크"}
-    resp = client.post("/api/search", json=payload)
+    resp = client.post("/v1/search", json=payload)
 
     assert resp.status_code == 200
     body = resp.json()
@@ -67,7 +67,7 @@ def test_search_with_params(client, mock_search_service):
     }
     mock_search_service.search.side_effect = None
 
-    resp = client.post("/api/search", json=payload)
+    resp = client.post("/v1/search", json=payload)
     assert resp.status_code == 200
     body = resp.json()
     assert body["success"] is True
@@ -83,7 +83,7 @@ def test_search_propagates_error_returns_500(client, mock_search_service):
     """
     mock_search_service.search.side_effect = RuntimeError("opensearch down")
 
-    resp = client.post("/api/search", json={"query": "신한은행"})
+    resp = client.post("/v1/search", json={"query": "신한은행"})
     assert resp.status_code == 500
 
 
@@ -93,7 +93,7 @@ def test_search_invalid_query_returns_400(client, mock_search_service):
     """
     mock_search_service.search.side_effect = DomainError("invalid query")
 
-    resp = client.post("/api/search", json={"query": "신한은행"})
+    resp = client.post("/v1/search", json={"query": "신한은행"})
     assert resp.status_code == 400
 
 
@@ -103,5 +103,5 @@ def test_search_propagates_error_teturns_500(client, mock_search_service):
     """
     mock_search_service.search.side_effect = ConnectionError("opensearch down")
 
-    resp = client.post("/api/search", json={"query": "신한은행"})
+    resp = client.post("/v1/search", json={"query": "신한은행"})
     assert resp.status_code == 500

@@ -50,7 +50,7 @@ def override_resolver(svc_html, svc_tsv):
 
 
 def test_transform_single_tsv(client, svc_html, svc_tsv):
-    r = client.post("/api/transform", json={"source": "tsv", "date": "3"})
+    r = client.post("/v1/transform", json={"source": "tsv", "date": "3"})
     assert r.status_code == 200
     body = r.json()
     assert body["success"] is True
@@ -62,7 +62,7 @@ def test_transform_single_tsv(client, svc_html, svc_tsv):
 
 
 def test_transform_single_html(client, svc_html, svc_tsv):
-    r = client.post("/api/transform", json={"source": "html", "date": "4"})
+    r = client.post("/v1/transform", json={"source": "html", "date": "4"})
     assert r.status_code == 200
     body = r.json()
     assert body["success"] is True
@@ -78,7 +78,7 @@ def test_transform_all_calls_both_and_returns_last(client, svc_html, svc_tsv):
     source=all 이면 FileType.__members__ 순서(html, tsv)로 두 서비스를 호출.
     구현상 마지막 호출(tsv)의 반환값이 응답 data에 담긴다.
     """
-    r = client.post("/api/transform", json={"source": "all", "date": "3"})
+    r = client.post("/v1/transform", json={"source": "all", "date": "3"})
     assert r.status_code == 200
     body = r.json()
     assert body["success"] is True
@@ -92,7 +92,7 @@ def test_transform_invalid_source_returns_422(client, svc_html, svc_tsv):
     """
     잘못된 source 값은 FileType(...) 캐스팅에서 ValueError -> 422 리턴
     """
-    r = client.post("/api/transform", json={"source": "pdf", "date": "3"})
+    r = client.post("/v1/transform", json={"source": "pdf", "date": "3"})
     assert r.status_code == 422
 
     svc_html.transform.assert_not_called()
@@ -107,7 +107,7 @@ def test_transform_not_found_resource_returns_404(client, svc_html, svc_tsv):
         resource="html/day_4",
         detail="No files for date=4",
     )
-    r = client.post("/api/transform", json={"source": "html", "date": "4"})
+    r = client.post("/v1/transform", json={"source": "html", "date": "4"})
     assert r.status_code == 404
 
     svc_html.transform.assert_called_once_with(source="html", date="4", collection=Collection.wiki)
@@ -119,7 +119,7 @@ def test_transform_unknown_error_returns_400(client, svc_html, svc_tsv):
     임의 DomainError 예외가 발생하면 400 리턴
     """
     svc_html.transform.side_effect = DomainError("unknown error")
-    r = client.post("/api/transform", json={"source": "html", "date": "3"})
+    r = client.post("/v1/transform", json={"source": "html", "date": "3"})
     assert r.status_code == 400
 
     svc_html.transform.assert_called_once_with(source="html", date="3", collection=Collection.wiki)

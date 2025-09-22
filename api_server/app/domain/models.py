@@ -133,15 +133,3 @@ class AliasResult(BaseModel):
     """alias 실행 결과."""
     index_name: list[str] = Field(default_factory=list)
     alias_name: str = Field(..., description="alias 이름")
-
-class ApiResponse(BaseModel):
-    """
-    문서 추출 응답
-    """
-    success: bool = Field(..., description="성공 여부")
-    message: str = Field(..., description="결과 메시지")
-    # 키: 'html' 또는 'tsv' (source=all인 경우 두 키 모두 존재)
-    data: Dict[str, Any] = Field(
-        ...,
-        description="타입별 결과 딕셔너리. 내부 구조는 작업 타입에 따라 상이"
-    )

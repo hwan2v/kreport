@@ -32,9 +32,9 @@ class PipelineClient:
         self.session = requests.Session()
         self.session.mount(base_url, adapter)
         self.session.headers.update({
-                "Connection": "keep-alive",
-                "Content-Type": "application/json"
-            })
+            "Connection": "keep-alive",
+            "Content-Type": "application/json"
+        })
 
     def close(self):
         try:
@@ -56,17 +56,17 @@ class PipelineClient:
         payload = {"date": date}
 
         print(f"day={date} Extract 단계 실행...")
-        extract_result = self._post("/api/extract", payload)
+        extract_result = self._post("/v1/extract", payload)
         if not extract_result:
             return {"error": "extract 실패"}
 
         print(f"day={date} Transform 단계 실행...")
-        transform_result = self._post("/api/transform", payload)
+        transform_result = self._post("/v1/transform", payload)
         if not transform_result:
             return {"error": "transform 실패"}
 
         print(f"day={date} Index 단계 실행...")
-        index_result = self._post("/api/index", payload)
+        index_result = self._post("/v1/index", payload)
         if not index_result:
             return {"error": "index 실패"}
 
@@ -91,12 +91,12 @@ class SearchReport:
         self.answer_dict = {}
         self.session = requests.Session()
         self.session.headers.update({
-                "Connection": "keep-alive",
-                "Content-Type": "application/json"
-            })
+            "Connection": "keep-alive",
+            "Content-Type": "application/json"
+        })
         self.session.mount(self.api_url, adapter)
         try:
-            self.session.get(f"{self.api_url}/api/health", timeout=3)
+            self.session.get(f"{self.api_url}/v1/health", timeout=3)
         except Exception:
             pass
     
@@ -133,7 +133,7 @@ class SearchReport:
             answer = report_obj["answer"]
             start_time = datetime.now()
             response = self.session.post(
-                f"{self.api_url}/api/search",
+                f"{self.api_url}/v1/search",
                 json={"query": question, "size": self.count},
                 timeout=10,
             )
@@ -271,7 +271,7 @@ class SearchReport:
     async def call_api(self, client: httpx.AsyncClient, url: str, q: str, size: int = 3) -> dict:
         """단일 호출 + 예외 처리 + 상태코드 체크"""
         start_time = datetime.now()
-        r = await client.post(f"{url}/api/search", json={"query": q, "size": size}, timeout=10)
+        r = await client.post(f"{url}/v1/search", json={"query": q, "size": size}, timeout=10)
         elapsed = (datetime.now() - start_time).total_seconds()
         r.raise_for_status()
         return {

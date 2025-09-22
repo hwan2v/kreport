@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from api_server.app.api.deps import get_search_service, SearchService
-from api_server.app.domain.models import ApiResponse
+from typing import Dict, Any
 import logging
 logger = logging.getLogger(__name__)
 
@@ -11,6 +11,18 @@ class SearchRequest(BaseModel):
     query: str = Field(..., description="검색 쿼리")
     size: int = Field(3, description="검색 결과 개수")
     explain: bool = Field(False, description="검색 결과 설명 포함 여부")
+
+class ApiResponse(BaseModel):
+    """
+    문서 추출 응답
+    """
+    success: bool = Field(..., description="성공 여부")
+    message: str = Field(..., description="결과 메시지")
+    # 키: 'html' 또는 'tsv' (source=all인 경우 두 키 모두 존재)
+    data: Dict[str, Any] = Field(
+        ...,
+        description="타입별 결과 딕셔너리. 내부 구조는 작업 타입에 따라 상이"
+    )
 
 @router.post(
     "",
