@@ -24,7 +24,6 @@ retry = Retry(
 )
 adapter = HTTPAdapter(max_retries=retry, pool_connections=10, pool_maxsize=10)
 
-COLUMN_COUNT_MAX = 3
 COLUMN_COUNT_MIN = 2
 
 class PipelineClient:
@@ -110,9 +109,8 @@ class SearchReport:
         with open(input_file_path, "r", encoding="utf-8-sig") as f:
             reader = csv.reader(f, delimiter="\t")
             next(reader)
-            for row in reader:
-                if len(row) > COLUMN_COUNT_MAX:
-                    continue
+            rows = list(reader)
+            for row in rows[:-1]:
                 no = int(row[0].strip())
                 question = row[1].strip()
                 answer = row[2].strip() if len(row) > COLUMN_COUNT_MIN else ""
@@ -185,7 +183,11 @@ class SearchReport:
 
         return s
         
-    def report_v1(self, answer_dict: Dict[int, str], search_dict: Dict[int, Dict[str, Any]], output_file_path: str = None):
+    def report_v1(
+        self, 
+        answer_dict: Dict[int, str], 
+        search_dict: Dict[int, Dict[str, Any]], 
+        output_file_path: str = None):
         true_count = 0
         total_search_time = 0.0
         report_file_path = output_file_path if output_file_path else self.answer_file.replace('.tsv', '_result.tsv')
@@ -241,6 +243,12 @@ class SearchReport:
                 self.sanitize(true_count, keep_newlines=False),
                 self.sanitize(avg, keep_newlines=False),
             ])
+        self._move_file(report_file_path, self.answer_file)
+    
+    def _move_file(self, source_file_path: str, target_file_path: str):
+        if os.path.exists(target_file_path):
+            os.remove(target_file_path)
+        os.rename(source_file_path, target_file_path)
     
     def _parse_search_result(self, search_result: Dict[str, Any]) -> List[str]:
         result = []
