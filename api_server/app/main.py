@@ -48,7 +48,12 @@ async def lifespan(app: FastAPI):
         except Exception:
             pass
 
-app = FastAPI(title="kakaobank Report API", lifespan=lifespan)
+app = FastAPI(
+    title="kakaobank report API", 
+    lifespan=lifespan,
+    description="kakaobank 과제",
+    version="1.0.0"
+)
 app.include_router(health.router)
 app.include_router(extract.router, prefix="/api")
 app.include_router(transform.router, prefix="/api")
