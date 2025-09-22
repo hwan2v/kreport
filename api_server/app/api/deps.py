@@ -83,7 +83,7 @@ def get_pipeline_resolver(os: OpenSearch = Depends(get_opensearch)) -> PipelineR
     return PipelineResolver(os)
 
 def get_search_service(os: OpenSearch = Depends(get_opensearch)) -> SearchService:
-     """
+    """
     FastAPI DI에서 OpenSearch 클라이언트를 받아 SearchService를 생성해 주입한다.
     """
     searcher: SearchPort = OpenSearchSearcher(os, settings.OPENSEARCH_ALIAS)
