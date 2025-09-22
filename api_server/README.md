@@ -71,6 +71,25 @@ kreport-opensearch-1
 kreport-python-1
 ```
 
+### 3) 시나리오 실행
+```
+# 추출 -> 변환 -> 색인 (date 1, 2, 3 반복 요청)
+curl -s -X POST http://localhost:8000/extract -H 'Content-Type: application/json' \
+  -d '{"date":"1"}'
+
+curl -s -X POST http://localhost:8000/transform -H 'Content-Type: application/json' \
+  -d '{"date":"1"}'
+
+curl -s -X POST http://localhost:8000/index -H 'Content-Type: application/json' \
+  -d '{"date":"1"}'
+
+
+# 검색
+curl -s -X POST http://localhost:8000/search -H 'Content-Type: application/json' \
+  -d '{"query":"카카오뱅크"}'
+
+```
+
 ## 3. 프로젝트 구조
 ```
 api_server/app
