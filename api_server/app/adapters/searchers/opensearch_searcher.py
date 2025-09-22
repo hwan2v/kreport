@@ -92,14 +92,6 @@ class OpenSearchSearcher(SearchPort):
                                         "boost": 2.5
                                     }
                                 },
-                                # {
-                                #     "multi_match": {
-                                #         "query": query,
-                                #         "fields": ["question.ko_nori_mixed", "question.ngram"],
-                                #         "type": "best_fields",
-                                #         "operator": "or"
-                                #     }
-                                # },
                                 {
                                     "match": {
                                         "infobox": {
