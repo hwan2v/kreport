@@ -29,7 +29,7 @@ def get_opensearch(request: Request) -> OpenSearch:
     없으면(테스트 등) 즉석 생성.
     """
     if hasattr(request.app.state, "opensearch"):
-        return request.app.state.opensearch  # type: ignore[attr-defined]
+        return request.app.state.opensearch
 
     u = urlparse(settings.OPENSEARCH_HOST)
     return OpenSearch(
