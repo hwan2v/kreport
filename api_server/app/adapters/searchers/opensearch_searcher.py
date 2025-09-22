@@ -9,6 +9,7 @@ import os
 from typing import Any, Dict
 from opensearchpy import OpenSearch
 from api_server.app.domain.ports import SearchPort
+from api_server.app.platform.exceptions import DomainError
 
 class OpenSearchSearcher(SearchPort):
     
@@ -27,8 +28,13 @@ class OpenSearchSearcher(SearchPort):
         Returns:
             Dict[str, Any]: 검색 결과(hits, total, took, timed_out)
         """
-        body = self._build_query(query, size=size, explain=explain)
-        return self.client.search(index=self.alias_name, body=body)
+        try:
+            body = self._build_query(query, size=size, explain=explain)
+            return self.client.search(index=self.alias_name, body=body)
+        except AttributeError as e:
+            raise DomainError(f"invalid client: {query} error={e}")
+        except Exception as e:
+            raise DomainError(f"failed to search: {query} error={e}")
 
     def _build_query(
         self, 

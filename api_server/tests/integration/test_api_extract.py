@@ -69,7 +69,6 @@ def test_extract_single_tsv(client, svc_html, svc_tsv):
     r = client.post("/api/extract", json={"source": "tsv", "date": "3"})
     assert r.status_code == 200
     body = r.json()
-    print(body)
     assert body["success"] is True
     assert body["message"].startswith("문서 추출 후 저장")
     # 반환 데이터는 서비스가 돌려준 파일명(엔드포인트 구현)
@@ -88,7 +87,7 @@ def test_extract_single_html(client, svc_html, svc_tsv):
     assert r.status_code == 200
     body = r.json()
     assert body["success"] is True
-    # todo.
+    print(body)
     assert body["data"] == {'html': 'wiki_3_parsed.json'}
 
     svc_html.extract.assert_called_once_with(source="html", date="4", collection=Collection.wiki)

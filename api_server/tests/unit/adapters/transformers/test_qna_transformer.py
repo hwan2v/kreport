@@ -15,6 +15,8 @@ from api_server.app.domain.models import (
     Collection,
     NormalizedChunk,
 )
+from api_server.app.platform.exceptions import DomainError
+
 """
 read_parsed_document
     JSON 리스트, 딕셔너리+data, 단일 딕셔너리 3가지 입력 형식 처리.
@@ -106,7 +108,7 @@ def test_read_parsed_document_unsupported_format_raises(tmp_path: Path):
     p = tmp_path / "bad.json"
     p.write_text('"just a string, not an object/list"', encoding="utf-8")
 
-    with pytest.raises(ValueError):
+    with pytest.raises(DomainError):
         _ = list(tr.read_parsed_document(str(p)))
 
 

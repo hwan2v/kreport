@@ -9,6 +9,8 @@ import re
 
 from api_server.app.domain.ports import ParsePort
 from api_server.app.domain.models import ParsedDocument, ParsedBlock, RawDocument
+from api_server.app.platform.exceptions import DomainError
+
 
 class WikiParser(ParsePort):
 
@@ -38,37 +40,42 @@ class WikiParser(ParsePort):
         Returns:
             ParsedDocument (제목/언어/infobox/summary/paragraph/body 블록)
         """
-        html = raw.body_text or ""
-        soup = BeautifulSoup(html, "lxml")
+        try:
+            html = raw.body_text or ""
+            soup = BeautifulSoup(html, "lxml")
 
-        blocks: List[ParsedBlock] = []
+            blocks: List[ParsedBlock] = []
 
-        # title/lang
-        title_tag = soup.select_one("h1") or soup.select_one("title")
-        title = title_tag.get_text(strip=True) if title_tag else None
-        lang = (soup.html.get("lang") if soup.html else None) or None
+            # title/lang
+            title_tag = soup.select_one("h1") or soup.select_one("title")
+            title = title_tag.get_text(strip=True) if title_tag else None
+            lang = (soup.html.get("lang") if soup.html else None) or None
 
-        # 불필요한 요소 제거
-        self._delete_unnecessary_elements(soup)
-        
-        # 필수 추출 셀렉터 딕셔너리에 따라 추출
-        blocks.append(self._parse_infobox_from(soup, self._MANDATORY_SELECTOR_DICT["infobox"]))
-        blocks.append(self._parse_summary_from(soup, self._MANDATORY_SELECTOR_DICT["summary"]))
-        blocks.append(self._parse_paragraph_from(soup, self._MANDATORY_SELECTOR_DICT["paragraph"]))
-        blocks.append(self._parse_body_from(soup, self._MANDATORY_SELECTOR_DICT["body"]))
-        
-        # 필수 셀렉터 키가 없으면 본문 전체를 body로 추출
-        self._parse_body_if_blocks_is_empty(soup, blocks)
-        blocks = [block for block in blocks if block is not None]
-        
-        return ParsedDocument(
-            source=raw.source,
-            title=title,
-            blocks=blocks,
-            lang=lang,
-            meta={"block_count": len(blocks)},
-            collection=raw.collection
-        )
+            # 불필요한 요소 제거
+            self._delete_unnecessary_elements(soup)
+            
+            # 필수 추출 셀렉터 딕셔너리에 따라 추출
+            blocks.append(self._parse_infobox_from(soup, self._MANDATORY_SELECTOR_DICT["infobox"]))
+            blocks.append(self._parse_summary_from(soup, self._MANDATORY_SELECTOR_DICT["summary"]))
+            blocks.append(self._parse_paragraph_from(soup, self._MANDATORY_SELECTOR_DICT["paragraph"]))
+            blocks.append(self._parse_body_from(soup, self._MANDATORY_SELECTOR_DICT["body"]))
+            
+            # 필수 셀렉터 키가 없으면 본문 전체를 body로 추출
+            self._parse_body_if_blocks_is_empty(soup, blocks)
+            blocks = [block for block in blocks if block is not None]
+            
+            return ParsedDocument(
+                source=raw.source,
+                title=title,
+                blocks=blocks,
+                lang=lang,
+                meta={"block_count": len(blocks)},
+                collection=raw.collection
+            )
+        except AttributeError as e:
+            raise DomainError(f"not found selector: {raw.source.uri} error={e}")
+        except Exception as e:
+            raise DomainError(f"failed to parse: {raw.source.uri} error={e}")
 
     def _delete_unnecessary_elements(self, soup: BeautifulSoup) -> None:
         """

@@ -9,10 +9,12 @@ import re
 from typing import Any, List, Dict, Tuple
 from pathlib import Path
 from opensearchpy import OpenSearch, helpers
+from opensearchpy.exceptions import ConnectionError, RequestError
 from api_server.app.domain.ports import IndexPort
 from api_server.app.domain.models import (
     NormalizedChunk, IndexResult, IndexErrorItem, AliasResult
 )
+from api_server.app.platform.exceptions import DomainError, IndexingFailed
 
 class OpenSearchIndexer(IndexPort):
     
@@ -68,13 +70,20 @@ class OpenSearchIndexer(IndexPort):
             Returns:
                 색인 결과(색인 성공/실패 건수, 실패 상세, 인덱스 이름, 별칭)
         """
-        chunks: List[NormalizedChunk] = []
-        with open(resource_file_path, "r", encoding="utf-8") as f:
-            for line in f:
-                doc = json.loads(line.strip())
-                if self._is_published(doc):
-                    chunks.append(NormalizedChunk.model_validate(doc))
-        return self._index(index_name, chunks)
+        try:
+            chunks: List[NormalizedChunk] = []
+            with open(resource_file_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    doc = json.loads(line.strip())
+                    if self._is_published(doc):
+                        chunks.append(NormalizedChunk.model_validate(doc))
+            return self._index(index_name, chunks)
+        except ConnectionError as e:
+            raise IndexingFailed(f"connection error: {index_name} resource_file_path={resource_file_path} error={e}")
+        except RequestError as e:
+            raise IndexingFailed(f"request error: {index_name} resource_file_path={resource_file_path} error={e}")
+        except Exception as e:
+            raise DomainError(f"failed to index: {index_name} resource_file_path={resource_file_path} error={e}")
 
     def _is_published(self, doc: dict) -> bool:
         """

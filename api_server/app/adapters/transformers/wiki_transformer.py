@@ -12,6 +12,7 @@ import re
 from api_server.app.domain.utils import infer_date_from_path
 from api_server.app.domain.ports import TransformPort
 from api_server.app.domain.models import ParsedDocument, NormalizedChunk
+from api_server.app.platform.exceptions import DomainError, ResourceNotFound
 
 class WikiTransformer(TransformPort):
     """
@@ -38,12 +39,17 @@ class WikiTransformer(TransformPort):
         Returns:
             List[ParsedDocument]
         """
-        docs: List[ParsedDocument] = []
-        with open(resource_file_path, "r", encoding="utf-8") as f:
-            for line in f:
-                if line.strip():
-                    docs.append(ParsedDocument.model_validate(json.loads(line)))
-        return docs
+        try:
+            docs: List[ParsedDocument] = []
+            with open(resource_file_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.strip():
+                        docs.append(ParsedDocument.model_validate(json.loads(line)))
+            return docs
+        except FileNotFoundError as e:
+            raise ResourceNotFound(f"resource not found: {resource_file_path} error={e}")
+        except Exception as e:
+            raise DomainError(f"failed to read: wiki docs. error={e}")
 
     def _calculate_features(self, docs: List[ParsedDocument]) -> Dict[str, dict]:
         """
@@ -124,50 +130,55 @@ class WikiTransformer(TransformPort):
         Returns:
             List[NormalizedChunk]
         """
-        scaled_features = self._calculate_features(docs)
-        result = []
-        num = 0
-        for doc in docs:
-            # 본문 추출
-            for b in doc.blocks:
-                if b.type == "body":
-                    body = self._normalize_percentage(b.text)
-                elif b.type == "summary":
-                    summary = self._normalize_percentage(b.text)
-                elif b.type == "infobox":
-                    infobox = self._normalize_percentage(b.text)
-                elif b.type == "paragraph":
-                    paragraph = self._normalize_percentage(b.text)
+        try:
+            scaled_features = self._calculate_features(docs)
+            result = []
+            num = 0
+            for doc in docs:
+                # 본문 추출
+                for b in doc.blocks:
+                    if b.type == "body":
+                        body = self._normalize_percentage(b.text)
+                    elif b.type == "summary":
+                        summary = self._normalize_percentage(b.text)
+                    elif b.type == "infobox":
+                        infobox = self._normalize_percentage(b.text)
+                    elif b.type == "paragraph":
+                        paragraph = self._normalize_percentage(b.text)
 
-            created_date = infer_date_from_path(doc.source.uri)
-            title = doc.title
-            author = self.default_author
-            published = self.default_published
-            file_type = "html"
-            source_path = doc.source.uri  # 원본 URL
-            source_id = f"{self.default_source_id}_{num}"
-            num += 1
+                created_date = infer_date_from_path(doc.source.uri)
+                title = doc.title
+                author = self.default_author
+                published = self.default_published
+                file_type = "html"
+                source_path = doc.source.uri  # 원본 URL
+                source_id = f"{self.default_source_id}_{num}"
+                num += 1
 
-            # NormalizedChunk 생성성
-            chunk = NormalizedChunk(
-                source_id=source_id,
-                source_path=source_path,
-                file_type=file_type,
-                collection=doc.collection,
-                title=title,
-                body=body,
-                paragraph=paragraph,
-                summary=summary,
-                infobox=infobox,
-                question=None,
-                answer=None,
-                title_embedding=None,
-                body_embedding=None,
-                created_date=created_date,
-                updated_date=created_date,
-                author=author,
-                published=published,
-                features=scaled_features[title],
-            )
-            result.append(chunk)
-        return result
+                # NormalizedChunk 생성성
+                chunk = NormalizedChunk(
+                    source_id=source_id,
+                    source_path=source_path,
+                    file_type=file_type,
+                    collection=doc.collection,
+                    title=title,
+                    body=body,
+                    paragraph=paragraph,
+                    summary=summary,
+                    infobox=infobox,
+                    question=None,
+                    answer=None,
+                    title_embedding=None,
+                    body_embedding=None,
+                    created_date=created_date,
+                    updated_date=created_date,
+                    author=author,
+                    published=published,
+                    features=scaled_features[title],
+                )
+                result.append(chunk)
+            return result
+        except FileNotFoundError as e:
+            raise ResourceNotFound(f"resource not found: {resource_file_path} error={e}")
+        except Exception as e:
+            raise DomainError(f"failed to transform: wiki docs. error={e}")

@@ -10,6 +10,7 @@ from pathlib import Path
 from api_server.app.domain.ports import FetchPort
 from api_server.app.domain.models import RawDocument, SourceRef, FileType, Collection
 from api_server.app.domain.utils import ext_to_file_type
+from api_server.app.platform.exceptions import DomainError, InvalidInput, ResourceNotFound
 
 class FileFetcher(FetchPort):
     def __init__(self, default_encoding: str = "utf-8") -> None:
@@ -28,28 +29,35 @@ class FileFetcher(FetchPort):
         Returns:
             RawDocument: 원문(텍스트/바이트, 인코딩/메타 포함)
         """
-        path = self._convert_uri_to_path(uri)
-        body_bytes = path.read_bytes()
-
         try:
-            body_text = body_bytes.decode(self.default_encoding)
-            encoding = self.default_encoding
-        except UnicodeDecodeError:
-            body_text = body_bytes.decode("utf-8", errors="ignore")
-            encoding = "utf-8"
-        # 줄바꿈 정규화
-        body_text = body_text.replace("\r\n", "\n").replace("\r", "\n")
-        
-        src = SourceRef(
-            uri=uri,
-            file_type=ext_to_file_type(path)
-        )
-        return RawDocument(
-            source=src,
-            body_text=body_text,
-            encoding=encoding,
-            collection=collection
-        )
+            path = self._convert_uri_to_path(uri)
+            body_bytes = path.read_bytes()
+
+            try:
+                body_text = body_bytes.decode(self.default_encoding)
+                encoding = self.default_encoding
+            except UnicodeDecodeError:
+                body_text = body_bytes.decode("utf-8", errors="ignore")
+                encoding = "utf-8"
+            # 줄바꿈 정규화
+            body_text = body_text.replace("\r\n", "\n").replace("\r", "\n")
+            
+            src = SourceRef(
+                uri=uri,
+                file_type=ext_to_file_type(path)
+            )
+            return RawDocument(
+                source=src,
+                body_text=body_text,
+                encoding=encoding,
+                collection=collection
+            )
+        except FileNotFoundError as e:
+            raise ResourceNotFound(f"Resource not found: {uri} collection={collection} error={e}")
+        except ValueError as e:
+            raise InvalidInput(f"invalid input file type: {uri} collection={collection} error={e}")
+        except Exception as e:
+            raise DomainError(f"failed to fetch: {uri} collection={collection} error={e}")
     
     def _convert_uri_to_path(self, uri: str) -> Path:
         """

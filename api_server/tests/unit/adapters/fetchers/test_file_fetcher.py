@@ -6,6 +6,7 @@ import pytest
 
 from api_server.app.adapters.fetchers.file_fetcher import FileFetcher
 from api_server.app.domain.models import Collection, FileType
+from api_server.app.platform.exceptions import DomainError
 
 """
 경로 처리: file:// 스킴과 일반 경로를 모두 검증.
@@ -118,5 +119,5 @@ def test__convert_uri_to_path_resolves_and_expands(tmp_path: Path, monkeypatch):
 def test_fetch_raises_when_file_not_exists(tmp_path: Path):
     fetcher = FileFetcher()
     missing = tmp_path / "nope.html"
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(DomainError):
         fetcher.fetch(str(missing), TEST_COLLECTION)

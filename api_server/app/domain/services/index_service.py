@@ -90,10 +90,12 @@ class IndexService:
         logger.info("service.run: source=%s date=%s", source, date)
         
         result = []
+        print(f"self._input_base_dir: {self._input_base_dir}")
         resource_files = self._listener.listen(
             source, date, 
             extension=source.lower(), 
             base_dir=self._input_base_dir)
+        print(f"resource_files: {resource_files}")
         for resource_file in resource_files:
             raw: RawDocument = self._fetcher.fetch(resource_file, collection)
             parsed: ParsedDocument = self._parser.parse(raw)

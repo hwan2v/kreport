@@ -12,6 +12,8 @@ from api_server.app.domain.models import (
     FileType,
     Collection,
 )
+from api_server.app.platform.exceptions import DomainError
+
 """
 정상 파싱: 행이 ParsedBlock(type="row", text=None, meta=dict) 로 생성되고, 전체 메타(rows, columns)가 맞는지.
 
@@ -103,7 +105,7 @@ def test_parse_raises_when_missing_required_columns():
     )
     raw = make_raw(tsv)
 
-    with pytest.raises(ValueError) as ei:
+    with pytest.raises(DomainError) as ei:
         _ = parser.parse(raw)
 
     msg = str(ei.value)
@@ -116,7 +118,7 @@ def test_parse_raises_on_empty_text():
     parser = QnaParser()
     raw = make_raw("")  # 헤더조차 없음 → REQUIRED_COLS 전부 누락
 
-    with pytest.raises(ValueError) as ei:
+    with pytest.raises(DomainError) as ei:
         _ = parser.parse(raw)
 
     msg = str(ei.value)
