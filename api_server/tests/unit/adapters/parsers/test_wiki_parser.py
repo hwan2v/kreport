@@ -26,7 +26,7 @@ TEST_COLLECTION = getattr(Collection, "wiki", None) or getattr(Collection, "qna"
 
 def make_raw(html: str, uri: str = "file:///tmp/wiki.html") -> RawDocument:
     return RawDocument(
-        source=SourceRef(uri=uri, file_type=FileType.html, headers=None),
+        source=SourceRef(uri=uri, file_type=FileType.html),
         body_text=html,
         encoding="utf-8",
         collection=TEST_COLLECTION,

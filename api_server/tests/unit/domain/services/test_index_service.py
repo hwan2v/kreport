@@ -1,5 +1,3 @@
-# api_server/tests/unit/domain/test_index_service.py
-
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -7,7 +5,7 @@ from unittest.mock import MagicMock, call
 import json
 import pytest
 
-from api_server.app.domain.services.index_service import IndexService  # 파일 경로가 search_service.py임에 주의
+from api_server.app.domain.services.index_service import IndexService
 from api_server.app.domain.models import (
     Collection,
     FileType,
@@ -40,7 +38,7 @@ def make_parsed_doc(uri: str, rows: list[dict], collection=Collection.wiki):
     """row(meta dict)들을 가진 ParsedDocument 생성"""
     blocks = [ParsedBlock(type="row", text=None, meta=r) for r in rows]
     return ParsedDocument(
-        source=SourceRef(uri=uri, file_type=FileType.tsv, headers=None),
+        source=SourceRef(uri=uri, file_type=FileType.tsv),
         title=None,
         blocks=blocks,
         lang=None,
@@ -54,8 +52,8 @@ def make_chunk(source_id="tsv_1", uri="file:///data/day_3/qna.tsv", collection="
     return NormalizedChunk(
         source_id=source_id,
         source_path=uri,
-        file_type="tsv",          # NormalizedChunk는 str 타입
-        collection=collection,    # NormalizedChunk는 str 타입
+        file_type="tsv",
+        collection=collection,
         title=None,
         body=None,
         summary=None,
@@ -91,7 +89,12 @@ def ports():
 def service(ports):
     listener, fetcher, parser, transformer, indexer = ports
     return IndexService(
-        listener=listener, fetcher=fetcher, parser=parser, transformer=transformer, indexer=indexer
+        listener=listener, 
+        fetcher=fetcher, 
+        parser=parser, 
+        transformer=transformer, 
+        indexer=indexer,
+        input_base_dir="api_server/tests/data"
     )
 
 
@@ -145,7 +148,7 @@ def test_extract_writes_parsed_jsonl_and_calls_ports(tmp_path: Path, service: In
     assert len(lines) == 2
 
     # 포트 호출 검증
-    listener.listen.assert_called_once_with("tsv", "3", extension="tsv")
+    listener.listen.assert_called_once_with("tsv", "3", extension="tsv", base_dir="api_server/tests/data")
     fetcher.fetch.assert_has_calls([call(resource_files[0], Collection.qna), call(resource_files[1], Collection.qna)])
     assert parser.parse.call_count == 2
 
@@ -207,7 +210,7 @@ def test_index_creates_indexes_and_rotates_alias(tmp_path: Path, service: IndexS
     indexer.rotate_alias_to_latest.return_value = AliasResult(index_name=["myidx-tsv-3"], alias_name="myalias")
     # 서비스에서 참조하는 속성 추가
     indexer.alias_name = "myalias"
-    indexer.prefix_index_name = "myidx"
+    indexer.prefix_name = "myidx"
 
     result = service.index(source="tsv", date="3", collection=Collection.qna)
 

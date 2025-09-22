@@ -49,7 +49,7 @@ def make_parsed_doc(
         ParsedBlock(type="paragraph", text=paragraph, meta={}),
     ]
     return ParsedDocument(
-        source=SourceRef(uri=uri, file_type=file_type, headers=None),
+        source=SourceRef(uri=uri, file_type=file_type),
         title=title,
         blocks=blocks,
         lang="ko",

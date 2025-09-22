@@ -42,7 +42,7 @@ def make_parsed_document(
     """rows(dict)의 리스트를 ParsedBlock(type='row')로 감싼 ParsedDocument 생성"""
     blocks = [ParsedBlock(type="row", text=None, meta=r) for r in rows]
     return ParsedDocument(
-        source=SourceRef(uri=uri, file_type=file_type, headers=None),
+        source=SourceRef(uri=uri, file_type=file_type),
         title=title,
         blocks=blocks,
         lang=None,
@@ -167,7 +167,7 @@ def test_transform_skips_non_row_blocks(monkeypatch):
 
     # row 1개 + body 1개 → body는 무시
     pd = ParsedDocument(
-        source=SourceRef(uri="file:///d/qna.tsv", file_type=FileType.tsv, headers=None),
+        source=SourceRef(uri="file:///d/qna.tsv", file_type=FileType.tsv),
         title=None,
         blocks=[
             ParsedBlock(type="row", text=None, meta={"id": "1", "question": "Q", "answer": "A", "published": "Y", "user_id": "u"}),

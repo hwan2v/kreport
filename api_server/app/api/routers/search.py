@@ -1,10 +1,8 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from api_server.app.api.deps import get_search_service, SearchService
-from api_server.app.platform.config import settings
-from api_server.app.security.guards import require_api_key
 
-router = APIRouter(prefix="/search", tags=["search"])# dependencies=[Depends(require_api_key)])
+router = APIRouter(prefix="/search", tags=["search"])
 
 
 class SearchRequest(BaseModel):

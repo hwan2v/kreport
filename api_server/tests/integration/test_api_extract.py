@@ -73,7 +73,7 @@ def test_extract_single_tsv(client, svc_html, svc_tsv):
     assert body["success"] is True
     assert body["message"].startswith("문서 추출 후 저장")
     # 반환 데이터는 서비스가 돌려준 파일명(엔드포인트 구현)
-    assert body["data"] == "qna_3_parsed.json"
+    assert body["data"] == {'tsv': 'qna_3_parsed.json'}
 
     # 호출 검증
     svc_tsv.extract.assert_called_once_with(source="tsv", date="3", collection=Collection.qna)
@@ -88,9 +88,8 @@ def test_extract_single_html(client, svc_html, svc_tsv):
     assert r.status_code == 200
     body = r.json()
     assert body["success"] is True
-    assert body["data"] == "wiki_3_parsed.json" or body["data"] == "wiki_4_parsed.json"  # 서비스 대역이 무엇을 리턴하느냐에 따라
-    # 현재 대역은 고정값 "wiki_3_parsed.json" 을 리턴하도록 했으므로 아래처럼도 OK
-    assert body["data"] == "wiki_3_parsed.json"
+    # todo.
+    assert body["data"] == {'html': 'wiki_3_parsed.json'}
 
     svc_html.extract.assert_called_once_with(source="html", date="4", collection=Collection.wiki)
     svc_tsv.extract.assert_not_called()
@@ -106,7 +105,7 @@ def test_extract_all_calls_both_and_returns_last(client, svc_html, svc_tsv):
     body = r.json()
     assert body["success"] is True
     # 마지막에 호출된 tsv 서비스의 반환값이어야 함
-    assert body["data"] == "qna_3_parsed.json"
+    assert body["data"] == {'html': 'wiki_3_parsed.json', 'tsv': 'qna_3_parsed.json'}
 
     svc_html.extract.assert_called_once_with(source="html", date="3", collection=Collection.wiki)
     svc_tsv.extract.assert_called_once_with(source="tsv", date="3", collection=Collection.qna)
@@ -114,12 +113,12 @@ def test_extract_all_calls_both_and_returns_last(client, svc_html, svc_tsv):
 
 def test_extract_invalid_source_returns_500(client, svc_html, svc_tsv):
     """
-    잘못된 source 값을 넣으면 라우터 내부에서 FileType(...) 변환 시 ValueError가 발생하여 500이 날 가능성이 큼.
+    잘못된 source 값을 넣으면 라우터 내부에서 FileType(...) 변환 시 ValueError가 발생하여 422 리턴
     (엔드포인트 구현에 try/except가 없기 때문)
     """
     r = client.post("/api/extract", json={"source": "pdf", "date": "3"})
-    # 현재 구현대로면 500 Internal Server Error 가 떨어짐
-    assert r.status_code == 500
+    # 422 Unprocessable Entity 반환환
+    assert r.status_code == 422
 
     # 호출 자체가 일어나지 않아야 함
     svc_html.extract.assert_not_called()

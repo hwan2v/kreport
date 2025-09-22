@@ -31,7 +31,6 @@ def get_opensearch(request: Request) -> OpenSearch:
     if hasattr(request.app.state, "opensearch"):
         return request.app.state.opensearch  # type: ignore[attr-defined]
 
-    # fallback: 즉석 생성 (테스트/단일 프로세스용)
     u = urlparse(settings.OPENSEARCH_HOST)
     return OpenSearch(
         hosts=[
@@ -42,15 +41,6 @@ def get_opensearch(request: Request) -> OpenSearch:
 
 
 # ---- 어댑터(구현) ----
-def get_fetcher() -> FetchPort:
-    return FileFetcher()
-
-def get_parser() -> ParsePort:
-    return WikiParser()
-
-def get_indexer(os: OpenSearch = Depends(get_opensearch)) -> IndexPort:
-    # OpenSearchIndexer expects (client, prefix_index_name, alias_name)
-    return OpenSearchIndexer(os, settings.OPENSEARCH_INDEX, settings.OPENSEARCH_ALIAS)
 
 class PipelineResolver:
     """source_type에 맞는 SearchService 조립기."""
@@ -67,10 +57,10 @@ class PipelineResolver:
 
         if source_type == "html":
             parser: ParsePort = WikiParser() 
-            transformer: TransformPort = WikiTransformer(default_source_id="html")
+            transformer: TransformPort = WikiTransformer(default_source_id=source_type.value)
         elif source_type == "tsv":
             parser: ParsePort = QnaParser()
-            transformer: TransformPort = QnaTransformer(default_source_id="tsv")
+            transformer: TransformPort = QnaTransformer(default_source_id=source_type.value)
         else:
             raise ValueError(f"unsupported source_type: {source_type}")
 
@@ -86,6 +76,5 @@ def get_pipeline_resolver(os: OpenSearch = Depends(get_opensearch)) -> PipelineR
     return PipelineResolver(os)
 
 def get_search_service(os: OpenSearch = Depends(get_opensearch)) -> SearchService:
-    # Wire SearchService with OpenSearchSearcher, not the raw OpenSearch client
     searcher: SearchPort = OpenSearchSearcher(os, settings.OPENSEARCH_ALIAS)
     return SearchService(searcher)

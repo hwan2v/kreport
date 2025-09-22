@@ -1,3 +1,7 @@
+"""
+사용자 검색 쿼리를 받아 검색하는 SearchPort 구현체.
+"""
+
 from __future__ import annotations
 
 import json
@@ -7,12 +11,22 @@ from opensearchpy import OpenSearch
 from api_server.app.domain.ports import SearchPort
 
 class OpenSearchSearcher(SearchPort):
-    """NormalizedChunk들을 OpenSearch에 bulk 적재하는 어댑터."""
+    
     def __init__(self, client: OpenSearch, alias_name: str) -> None:
         self.client = client
         self.alias_name = alias_name
 
-    def search(self, query: str, size: int = 3, explain: bool = False) -> Any:
+    def search(self, query: str, size: int = 3, explain: bool = False) -> Dict[str, Any]:
+        """
+        Opensearch에 검색을 수행하여 결과를 반환한다.
+
+        Args:
+            query (str): 검색어
+            size (int): 가져올 문서 개수 (기본 3)
+            explain (bool): 검색 결과 설명 포함 여부 (기본 False)
+        Returns:
+            Dict[str, Any]: 검색 결과(hits, total, took, timed_out)
+        """
         body = self._build_query(query, size=size, explain=explain)
         return self.client.search(index=self.alias_name, body=body)
 
@@ -23,12 +37,15 @@ class OpenSearchSearcher(SearchPort):
         explain: bool = False, 
         min_score: float = 5) -> Dict[str, Any]:
         """
-        title, body 양쪽을 대상으로 keyword 검색 후 상위 N개 반환.
+        검색 쿼리 바디를 구성한다.
+
         Args:
             query (str): 검색어
             size (int): 가져올 문서 개수 (기본 3)
+            explain (bool): 검색 결과 설명 포함 여부 (기본 False)
+            min_score (float): 최소 점수 (기본 5)
         Returns:
-            list of _source dict
+            Dict[str, Any]: 검색 쿼리 바디
         """
         body = {
             "from": 0,

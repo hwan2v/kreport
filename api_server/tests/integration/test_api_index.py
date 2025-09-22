@@ -73,9 +73,9 @@ def test_index_single_tsv(client, svc_html, svc_tsv):
     body = r.json()
     assert body["success"] is True
     assert body["message"].startswith("문서 인덱싱")
-    assert body["data"]["indexed"] == 7
-    assert body["data"]["index_name"] == ["myidx-tsv-3"]
-    assert body["data"]["alias_name"] == "myalias"
+    assert body["data"]["tsv"]["indexed"] == 7
+    assert body["data"]["tsv"]["index_name"] == ["myidx-tsv-3"]
+    assert body["data"]["tsv"]["alias_name"] == "myalias"
 
     svc_tsv.index.assert_called_once_with(source="tsv", date="3", collection=Collection.qna)
     svc_html.index.assert_not_called()
@@ -86,9 +86,9 @@ def test_index_single_html(client, svc_html, svc_tsv):
     assert r.status_code == 200
     body = r.json()
     assert body["success"] is True
-    assert body["data"]["indexed"] == 5
-    assert body["data"]["index_name"] == ["myidx-html-3"]  # 더미 리턴값이므로 고정
-    assert body["data"]["alias_name"] == "myalias"
+    assert body["data"]["html"]["indexed"] == 5
+    assert body["data"]["html"]["index_name"] == ["myidx-html-3"]  # 더미 리턴값이므로 고정
+    assert body["data"]["html"]["alias_name"] == "myalias"
 
     svc_html.index.assert_called_once_with(source="html", date="4", collection=Collection.wiki)
     svc_tsv.index.assert_not_called()
@@ -103,8 +103,10 @@ def test_index_all_calls_both_and_returns_last(client, svc_html, svc_tsv):
     assert r.status_code == 200
     body = r.json()
     assert body["success"] is True
-    assert body["data"]["index_name"] == ["myidx-tsv-3"]
-    assert body["data"]["indexed"] == 7
+    assert body["data"]["tsv"]["index_name"] == ["myidx-tsv-3"]
+    assert body["data"]["tsv"]["indexed"] == 7
+    assert body["data"]["html"]["index_name"] == ["myidx-html-3"]
+    assert body["data"]["html"]["indexed"] == 5
 
     svc_html.index.assert_called_once_with(source="html", date="3", collection=Collection.wiki)
     svc_tsv.index.assert_called_once_with(source="tsv", date="3", collection=Collection.qna)
@@ -112,10 +114,10 @@ def test_index_all_calls_both_and_returns_last(client, svc_html, svc_tsv):
 
 def test_index_invalid_source_returns_500(client, svc_html, svc_tsv):
     """
-    잘못된 source 값은 FileType(...) 캐스팅에서 ValueError → 현재 구현상 500을 반환.
+    잘못된 source 값은 FileType(...) 캐스팅에서 ValueError -> 422을 반환.
     """
     r = client.post("/api/index", json={"source": "pdf", "date": "3"})
-    assert r.status_code == 500
+    assert r.status_code == 422
 
     svc_html.index.assert_not_called()
     svc_tsv.index.assert_not_called()

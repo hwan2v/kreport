@@ -1,12 +1,15 @@
 """
 도메인 모델 정의.
 
-- RawDocument: 페치된 원문(HTML/텍스트/마크다운 등)
+- Collection: 컬렉션 이름
+- FileType: 원문 콘텐츠 타입
+- SourceRef: 원본 리소스 식별자/메타데이터
+- RawDocument: 페치된 원문(HTML/텍스트 등)
 - ParsedDocument/ParsedBlock: 파서가 구조화한 결과
-- NormalizedChunk: 인덱싱 단위(컬렉션에 적재될 “정규화된 청크”)
+- NormalizedChunk: 인덱싱 단위(컬렉션에 적재될 정규화된 청크)
 - IndexResult: 인덱싱 결과 요약
-
-Pydantic v2 기반 모델이라 검증/직렬화가 용이합니다.
+- AliasResult: alias 결과 요약
+- IndexErrorItem: 인덱싱 실패 항목 요약
 """
 
 from __future__ import annotations
@@ -24,7 +27,6 @@ class Collection(str, Enum):
     qna = "qna"
 
 class FileType(str, Enum):
-    """원문 콘텐츠 타입."""
     html = "html"
     tsv = "tsv"
 
@@ -32,10 +34,7 @@ class SourceRef(BaseModel):
     """원본 리소스 식별자/메타데이터."""
     uri: str = Field(..., description="원본 식별자(URL, file://, s3:// 등)")
     file_type: FileType | None = Field(
-        None, description="알고 있을 경우 명시(미지정이면 페처/파서가 추정)"
-    )
-    headers: dict[str, str] | None = Field(
-        default=None, description="페칭 시 사용한 헤더(재현성/감사 용도)"
+        None, description="파일 타입(html, tsv 등)"
     )
 
 
@@ -51,20 +50,20 @@ class RawDocument(BaseModel):
 
 
 class ParsedBlock(BaseModel):
-    """파서가 뽑아낸 최소 블록 단위."""
+    """파서가 추출한 최소 콘텐츠 블록 단위."""
     type: Literal["title", "body", "paragraph", "image", "summary", "infobox", "row"] = Field(
-        "paragraph", description="블록 유형"
+        "paragraph", description="콘텐츠 블록 유형"
     )
     text: str | None = Field(None, description="텍스트 콘텐츠(이미지 등은 None)")
     meta: JSONDict = Field(default_factory=dict, description="태그/속성 등 부가 정보")   
 
 
 class ParsedDocument(BaseModel):
-    """구조화된 문서(여러 블록으로 구성)."""
+    """구조화된 문서(여러 콘텐츠 블록으로 구성)."""
     source: SourceRef
     title: str | None = Field(None, description="문서 제목 추정")
     blocks: list[ParsedBlock] = Field(default_factory=list)
-    lang: str | None = Field(None, description="BCP-47 (예: ko, en-US)")
+    lang: str | None = Field(None, description="ko (예: ko, en-US)")
     meta: JSONDict = Field(default_factory=dict, description="추출 시점의 부가 메타")
     collection: Collection | None = Field(None, description="컬렉션 이름")
 

@@ -1,10 +1,10 @@
 """
-TSV에서 질문/답변을 뽑아 NormalizedChunk로 변환하는 구현체.
+tsv에서 파싱된 결과를 색인 단위인 NormalizedChunk로 변환하는 TransformPort 구현체.
 """
 
 from __future__ import annotations
 from datetime import datetime, timezone, timedelta
-from typing import Iterable, List
+from typing import List
 import json
 
 from api_server.app.domain.utils import infer_date_from_path
@@ -12,23 +12,17 @@ from api_server.app.domain.ports import TransformPort
 from api_server.app.domain.models import ParsedDocument, NormalizedChunk
 
 class QnaTransformer(TransformPort):
-    """
-    TSV ParsedDocument → NormalizedChunk[]
-    (※ 기존 TransformPort가 NormalizedChunk를 반환했다면,
-       이 구현은 NormalizedChunk 반환하도록 프로젝트에 맞춰 인터페이스를 살짝 조정하거나
-       Indexer에서 dict/NormalizedChunk 모두 처리하게 만들어도 됩니다.)
-    """
 
     def __init__(self, default_source_id: str = "tsv"):
         self.default_source_id = default_source_id
 
-    def read_parsed_document(self, resource_file_path: str) -> Iterable[ParsedDocument]:
+    def read_parsed_document(self, resource_file_path: str) -> List[ParsedDocument]:
         """
-        TSV 파일을 읽어 ParsedDocument로 변환하는 메서드.
+        json 파일을 읽어 ParsedDocument로 변환하는 메서드.
         Args:
-            resource_file_path: str
+            resource_file_path: str (json 파일 경로)
         Returns:
-            Iterable[ParsedDocument]
+            List[ParsedDocument]
         """
         with open(resource_file_path, "r", encoding="utf-8") as f:
             payload = json.load(f)
@@ -48,7 +42,21 @@ class QnaTransformer(TransformPort):
             raise ValueError("Unsupported JSON format for ParsedDocument deserialization")
         return docs
 
-    def transform(self, docs: List[ParsedDocument]) -> Iterable[NormalizedChunk]:
+    def transform(self, docs: List[ParsedDocument]) -> List[NormalizedChunk]:
+        """
+        ParsedDocument를 NormalizedChunk로 변환하는 메서드.
+        parsed document의 row 블록을 참조하여 NormalizedChunk를 생성한다.
+        - 매핑 규칙: 
+            id -> source_id
+            question -> question
+            answer -> answer 
+            user_id -> author
+            published -> published
+        Args:
+            docs: List[ParsedDocument]
+        Returns:
+            List[NormalizedChunk]
+        """
         result = []
         for doc in docs:
             created_date = infer_date_from_path(doc.source.uri)
@@ -57,15 +65,15 @@ class QnaTransformer(TransformPort):
                 if b.type != "row":
                     continue
                 row = b.meta  # Dict[str, str]
-                # 매핑 규칙
+                
                 id = row.get('id')
                 source_id   = f"{self.default_source_id}_{id}"
                 source_path = uri
                 file_type   = doc.source.file_type
-                question       = row.get("question") or None
-                answer        = row.get("answer") or ""
+                question    = row.get("question") or None
+                answer      = row.get("answer") or ""
                 author      = row.get("user_id") or None
-                published     = (row.get("published") or "").upper().startswith("Y")
+                published   = (row.get("published") or "").upper().startswith("Y")
 
                 chunk = NormalizedChunk(
                     source_id=source_id,
@@ -79,9 +87,9 @@ class QnaTransformer(TransformPort):
                     infobox=None,
                     question=question,
                     answer=answer,
-                    title_embedding=None,   # 필요 시 임베딩 생성기로 채우기
-                    body_embedding=None,    # 필요 시 임베딩 생성기로 채우기
-                    created_date=created_date,       # TSV에 날짜가 없으므로 현재 시각 사용(또는 정책에 맞게 변경)
+                    title_embedding=None,
+                    body_embedding=None,
+                    created_date=created_date,
                     updated_date=created_date,
                     author=author,
                     published=published,

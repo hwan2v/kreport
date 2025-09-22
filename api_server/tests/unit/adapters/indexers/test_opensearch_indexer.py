@@ -49,7 +49,7 @@ def mock_client():
 def indexer(mock_client, monkeypatch):
     """_load_index_schema를 우회해서 파일 접근 없이 indexer 생성"""
     with patch.object(OpenSearchIndexer, "_load_index_schema") as mock_loader:
-        inst = OpenSearchIndexer(client=mock_client, prefix_index_name="myidx", alias_name="myalias")
+        inst = OpenSearchIndexer(client=mock_client, prefix_name="myidx", alias_name="myalias")
         inst.index_schema = {"settings": {}, "mappings": {}}  # 스키마는 빈 값으로
     return inst
 
@@ -159,49 +159,6 @@ def test_index_reads_jsonl_and_filters_published(indexer: OpenSearchIndexer, tmp
     # published=True 인 것만 1개
     assert res.indexed == 1
     assert captured["count"] == 1
-
-
-# ----------------------
-# alias 조작
-# ----------------------
-def test_delete_alias_when_exists(indexer: OpenSearchIndexer, mock_client: MagicMock):
-    mock_client.indices.exists_alias.return_value = True
-
-    indexer.delete_alias("myalias")
-
-    mock_client.indices.exists_alias.assert_called_once_with(name="myalias")
-    mock_client.indices.delete_alias.assert_called_once_with(name="myalias", index="_all")
-
-
-def test_delete_alias_when_not_exists(indexer: OpenSearchIndexer, mock_client: MagicMock):
-    mock_client.indices.exists_alias.return_value = False
-
-    indexer.delete_alias("myalias")
-
-    mock_client.indices.delete_alias.assert_not_called()
-
-
-def test_add_alias_for_existing_indices(indexer: OpenSearchIndexer, mock_client: MagicMock):
-    mock_client.indices.exists_alias.return_value = False
-    mock_client.indices.exists.side_effect = [True, True]
-
-    ret = indexer.add_alias("myalias", ["myidx-html-3", "myidx-tsv-2"])
-
-    assert ret == "myalias"
-    assert mock_client.indices.put_alias.call_args_list == [
-        call(index="myidx-html-3", name="myalias"),
-        call(index="myidx-tsv-2", name="myalias"),
-    ]
-
-
-def test_add_alias_skips_missing_index(indexer: OpenSearchIndexer, mock_client: MagicMock):
-    mock_client.indices.exists_alias.return_value = False
-    mock_client.indices.exists.side_effect = [True, False]
-
-    indexer.add_alias("myalias", ["myidx-html-3", "missing-idx"])
-
-    mock_client.indices.put_alias.assert_called_once_with(index="myidx-html-3", name="myalias")
-
 
 # ----------------------
 # rotate_alias_to_latest

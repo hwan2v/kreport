@@ -31,7 +31,7 @@ TEST_COLLECTION = getattr(Collection, "qna", None) or getattr(Collection, "wiki"
 def make_raw(tsv_text: str, uri: str = "file:///tmp/qna.tsv") -> RawDocument:
     """간단한 RawDocument 생성 헬퍼"""
     return RawDocument(
-        source=SourceRef(uri=uri, file_type=FileType.tsv, headers=None),
+        source=SourceRef(uri=uri, file_type=FileType.tsv),
         body_text=tsv_text,
         encoding="utf-8",
         collection=TEST_COLLECTION,

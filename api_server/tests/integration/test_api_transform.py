@@ -63,7 +63,7 @@ def test_transform_single_tsv(client, svc_html, svc_tsv):
     body = r.json()
     assert body["success"] is True
     assert body["message"].startswith("문서 변환 성공")
-    assert body["data"] == "qna_3_normalized.json"
+    assert body["data"] == {'tsv': 'qna_3_normalized.json'}
 
     svc_tsv.transform.assert_called_once_with(source="tsv", date="3", collection=Collection.qna)
     svc_html.transform.assert_not_called()
@@ -75,7 +75,7 @@ def test_transform_single_html(client, svc_html, svc_tsv):
     body = r.json()
     assert body["success"] is True
     # 더미 서비스가 고정값을 반환하도록 했으므로 아래 값으로 검증
-    assert body["data"] == "wiki_3_normalized.json"
+    assert body["data"] == {'html': 'wiki_3_normalized.json'}
 
     svc_html.transform.assert_called_once_with(source="html", date="4", collection=Collection.wiki)
     svc_tsv.transform.assert_not_called()
@@ -90,7 +90,7 @@ def test_transform_all_calls_both_and_returns_last(client, svc_html, svc_tsv):
     assert r.status_code == 200
     body = r.json()
     assert body["success"] is True
-    assert body["data"] == "qna_3_normalized.json"
+    assert body["data"] == {'html': 'wiki_3_normalized.json', 'tsv': 'qna_3_normalized.json'}
 
     svc_html.transform.assert_called_once_with(source="html", date="3", collection=Collection.wiki)
     svc_tsv.transform.assert_called_once_with(source="tsv", date="3", collection=Collection.qna)
@@ -98,10 +98,10 @@ def test_transform_all_calls_both_and_returns_last(client, svc_html, svc_tsv):
 
 def test_transform_invalid_source_returns_500(client, svc_html, svc_tsv):
     """
-    잘못된 source 값은 FileType(...) 캐스팅에서 ValueError → 현재 구현상 500을 반환.
+    잘못된 source 값은 FileType(...) 캐스팅에서 ValueError -> 422 리턴
     """
     r = client.post("/api/transform", json={"source": "pdf", "date": "3"})
-    assert r.status_code == 500
+    assert r.status_code == 422
 
     svc_html.transform.assert_not_called()
     svc_tsv.transform.assert_not_called()

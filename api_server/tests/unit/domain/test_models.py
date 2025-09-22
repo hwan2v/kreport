@@ -33,18 +33,6 @@ def test_enums_basic():
     assert FileType.html.value == "html"
     assert FileType("tsv") is FileType.tsv
 
-
-def test_source_ref_optional_fields():
-    s = SourceRef(uri="file:///tmp/file.tsv", file_type=FileType.tsv, headers={"Auth": "x"})
-    assert s.uri.startswith("file://")
-    assert s.file_type == FileType.tsv
-    assert s.headers == {"Auth": "x"}
-
-    s2 = SourceRef(uri="http://example.com")  # file_type/headers 생략 가능
-    assert s2.file_type is None
-    assert s2.headers is None
-
-
 def test_raw_document_defaults_and_types():
     s = SourceRef(uri="file:///tmp/doc.html", file_type=FileType.html)
     r = RawDocument(source=s, body_text="<html/>", encoding="utf-8", collection=Collection.wiki)

@@ -5,7 +5,7 @@ HTML에서 제목/문단/리스트/헤딩을 뽑아 NormalizedChunk로 변환하
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Iterable, List
+from typing import List
 import json
 import re
 
@@ -24,21 +24,19 @@ class WikiTransformer(TransformPort):
         self,
         default_source_id: str = "html",
         default_author: str | None = None,
-        default_published: bool = True,
-        joiner: str = " ",
+        default_published: bool = True
     ) -> None:
         self.default_source_id = default_source_id
         self.default_author = default_author
         self.default_published = default_published
-        self.joiner = joiner
 
-    def read_parsed_document(self, resource_file_path: str) -> Iterable[ParsedDocument]:
+    def read_parsed_document(self, resource_file_path: str) -> List[ParsedDocument]:
         """
-        HTML 파일을 읽어 ParsedDocument로 변환하는 메서드.
+        json 파일을 읽어 ParsedDocument로 변환하는 메서드.
         Args:
-            resource_file_path: str
+            resource_file_path: str (json 파일 경로)
         Returns:
-            Iterable[ParsedDocument]
+            List[ParsedDocument]
         """
         docs: List[ParsedDocument] = []
         with open(resource_file_path, "r", encoding="utf-8") as f:
@@ -48,10 +46,21 @@ class WikiTransformer(TransformPort):
         return docs
 
     def _calculate_features(self, docs: List[ParsedDocument]) -> Dict[str, dict]:
-        # 문서별 raw features 저장
+        """
+        문서별 raw features 계산하여 반환하는 메서드(검색 스코어 계산에 사용)
+        - feature_keys: body, summary, infobox, paragraph
+        - 각 feature별 전체 min/max 구하기
+        - 스케일링 적용 (0~1 범위)
+
+        Args:
+            docs: List[ParsedDocument]
+        Returns:
+            Dict[str, dict]: 문서별 raw features
+        """
         raw_features = {}
         feature_keys = ["body", "summary", "infobox", "paragraph"]
 
+        # 문서별 features의 길이 구하기
         for doc in docs:
             features = {}
             for b in doc.blocks:
@@ -88,6 +97,13 @@ class WikiTransformer(TransformPort):
         return scaled_features
 
     def _normalize_percentage(self, text: str) -> str:
+        """
+        퍼센트 포맷을 소수점 둘째 자리까지 포맷하는 메서드.
+        Args:
+            text: str
+        Returns:
+            str
+        """
         # 정규식: 정수부(\d+), 소수부 한 자리(\.\d), % 기호
         pattern = r"(\d+\.\d)%"
 
@@ -99,7 +115,15 @@ class WikiTransformer(TransformPort):
 
         return re.sub(pattern, repl, text)
 
-    def transform(self, docs: List[ParsedDocument]) -> Iterable[NormalizedChunk]:
+    def transform(self, docs: List[ParsedDocument]) -> List[NormalizedChunk]:
+        """
+        ParsedDocument를 NormalizedChunk로 변환하는 메서드.
+        parsed document의 블록을 참조하여 NormalizedChunk를 생성한다.
+        Args:
+            docs: List[ParsedDocument]
+        Returns:
+            List[NormalizedChunk]
+        """
         scaled_features = self._calculate_features(docs)
         result = []
         num = 0
@@ -115,7 +139,6 @@ class WikiTransformer(TransformPort):
                 elif b.type == "paragraph":
                     paragraph = self._normalize_percentage(b.text)
 
-            # 메타 채우기(필요 시 doc.meta에서 author/date를 파싱하도록 확장 가능)
             created_date = infer_date_from_path(doc.source.uri)
             title = doc.title
             author = self.default_author

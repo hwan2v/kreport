@@ -3,7 +3,7 @@ TSV 파일을 파싱하여 ParsedDocument로 변환하는 구현체.
 """
 
 from __future__ import annotations
-from typing import Sequence, List, Dict
+from typing import List, Dict
 import csv
 import io
 
@@ -13,10 +13,15 @@ from api_server.app.domain.models import ParsedDocument, ParsedBlock, RawDocumen
 REQUIRED_COLS = {"id", "question", "answer", "published", "user_id"}
 
 class QnaParser(ParsePort):
-    """
-    TSV 텍스트를 읽어 각 행을 ParsedBlock(meta=row)으로 담는다.
-    """
+    
     def parse(self, raw: RawDocument) -> ParsedDocument:
+        """
+        TSV 텍스트를 읽어 각 행을 ParsedBlock(meta=row)으로 담는다.
+        Args:
+            raw: 파싱할 RawDocument
+        Returns:
+            ParsedDocument: 파싱된 문서
+        """
         text = raw.body_text or ""
         reader = csv.DictReader(io.StringIO(text), delimiter="\t")
         
