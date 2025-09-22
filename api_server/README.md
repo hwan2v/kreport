@@ -74,18 +74,18 @@ kreport-python-1
 ### 3) 시나리오 실행
 ```
 # 추출 -> 변환 -> 색인 (date 1, 2, 3 반복 요청)
-curl -s -X POST http://localhost:8000/extract -H 'Content-Type: application/json' \
+curl -s -X POST http://localhost:8000/v1/extract -H 'Content-Type: application/json' \
   -d '{"date":"1"}'
 
-curl -s -X POST http://localhost:8000/transform -H 'Content-Type: application/json' \
+curl -s -X POST http://localhost:8000/v1/transform -H 'Content-Type: application/json' \
   -d '{"date":"1"}'
 
-curl -s -X POST http://localhost:8000/index -H 'Content-Type: application/json' \
+curl -s -X POST http://localhost:8000/v1/index -H 'Content-Type: application/json' \
   -d '{"date":"1"}'
 
 
 # 검색
-curl -s -X POST http://localhost:8000/search -H 'Content-Type: application/json' \
+curl -s -X POST http://localhost:8000/v1/search -H 'Content-Type: application/json' \
   -d '{"query":"카카오뱅크"}'
 
 ```
@@ -206,19 +206,19 @@ pytest api_server/tests/integration -q
 curl -s http://localhost:8000/health
 
 # Extract (전체)
-curl -s -X POST http://localhost:8000/extract -H 'Content-Type: application/json' \
+curl -s -X POST http://localhost:8000/v1/extract -H 'Content-Type: application/json' \
   -d '{"date":"3"}'
 
 # Transform (HTML만)
-curl -s -X POST http://localhost:8000/transform -H 'Content-Type: application/json' \
+curl -s -X POST http://localhost:8000/v1/transform -H 'Content-Type: application/json' \
   -d '{"source":"html","date":"3"}'
 
 # Index (TSV만)
-curl -s -X POST http://localhost:8000/index -H 'Content-Type: application/json' \
+curl -s -X POST http://localhost:8000/v1/index -H 'Content-Type: application/json' \
   -d '{"source":"tsv","date":"3"}'
 
 # Search
-curl -s -X POST http://localhost:8000/search -H 'Content-Type: application/json' \
+curl -s -X POST http://localhost:8000/v1/search -H 'Content-Type: application/json' \
   -d '{"query":"카카오뱅크"}'
 
 ```
