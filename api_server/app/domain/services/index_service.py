@@ -1,22 +1,3 @@
-"""
-SearchService
-==============
-
-문서 파이프라인 오케스트레이터.
-
-Flow:
-    Fetcher → Parser → Transformer → Indexer
-
-- 도메인은 **Port(인터페이스)** 에만 의존합니다. (DIP)
-- 구현체는 adapters 레이어에서 주입(의존성 주입; DI)합니다.
-
-예시:
-    svc = SearchService(fetcher, parser, transformer, indexer)
-    result = svc.run(source="https://example.com", collection="news")
-    # 또는 여러 소스를 한 번에 bulk 색인:
-    result = svc.many(sources=[...], collection="news")
-"""
-
 from __future__ import annotations
 from pydantic import BaseModel
 from pathlib import Path

@@ -1,5 +1,3 @@
-# api_server/tests/unit/adapters/parsers/test_wiki_parser.py
-
 import pytest
 from api_server.app.adapters.parsers.wiki_parser import WikiParser
 from api_server.app.domain.models import (
@@ -21,6 +19,8 @@ infobox 추출: 지정된 셀렉터에서 tbody 텍스트를 가져오는지 확
 
 summary/paragraph: 원 코드의 셀렉터가 BeautifulSoup의 class_ 동작과 엇갈릴 수 있어 테스트에서는 monkeypatch로 안전한 셀렉터로 교체(실서비스에서도 해당 셀렉터 로직은 보완 권장).
 """
+
+# Collection enum이 있다면 일반적으로 Collection.wiki / Collection.qna 같은 멤버가 있을 것이라 가정
 TEST_COLLECTION = getattr(Collection, "wiki", None) or getattr(Collection, "qna", None)
 
 
@@ -35,11 +35,12 @@ def make_raw(html: str, uri: str = "file:///tmp/wiki.html") -> RawDocument:
 
 def test_parse_basic_title_lang_infobox_body(monkeypatch):
     """
-    - h1에서 title 추출
-    - html lang 속성 확인
-    - infobox(tbody) 텍스트 추출
-    - body 블록에 헤딩/문단/리스트/테이블 텍스트가 모이는지 확인
-    - summary/paragraph 셀렉터는 테스트에서 원활히 동작하도록 monkeypatch
+    title/lang/infobox/body 추출 검증
+      - 타이틀/언어 추출: h1, <html lang="..."> 에서 값이 들어오는지 확인.  
+      - 불필요 요소 제거: script/style/nav 등이 본문 텍스트에 섞이지 않는지 간접 검증.
+      - infobox 추출: 지정된 셀렉터에서 tbody 텍스트를 가져오는지 확인.
+      - 본문(body) 구성: 헤딩/문단/리스트/테이블의 텍스트를 하나의 body 블록으로 합치는지 확인.
+      - summary/paragraph: 해당 셀렉터로 텍스트 추출 검증
     """
     html = """
     <html lang="ko">
@@ -78,12 +79,11 @@ def test_parse_basic_title_lang_infobox_body(monkeypatch):
 
     parser = WikiParser()
 
-    # 🧩 monkeypatch: 원 코드의 _MANDATORY_SELECTOR_DICT 중
-    #  - summary: class_ 매칭이 안전하도록 "mw-parser-output" 하나만 사용
-    #  - paragraph: "mw-heading mw-heading2" 대신 실제로 존재하는 단일 클래스 사용
+    # monkeypatch: 원 코드의 _MANDATORY_SELECTOR_DICT 복사 한뒤, 
+    # summary/paragraph 셀렉터를 테스트용으로 변경
     patched = dict(parser._MANDATORY_SELECTOR_DICT)
     patched["summary"] = "mw-parser-output"
-    patched["paragraph"] = "mw-heading2"  # 본문에 실제 h2 wrapper가 없으니, 본문 검증은 body 블록 중심으로 확인
+    patched["paragraph"] = "mw-heading2"
     monkeypatch.setattr(parser, "_MANDATORY_SELECTOR_DICT", patched, raising=True)
 
     raw = make_raw(html)

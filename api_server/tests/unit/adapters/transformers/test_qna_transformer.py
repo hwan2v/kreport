@@ -1,5 +1,3 @@
-# api_server/tests/unit/adapters/transformers/test_qna_transformer.py
-
 from datetime import datetime, timezone
 from pathlib import Path
 import json
@@ -17,23 +15,10 @@ from api_server.app.domain.models import (
 )
 from api_server.app.platform.exceptions import DomainError
 
-"""
-read_parsed_document
-    JSON 리스트, 딕셔너리+data, 단일 딕셔너리 3가지 입력 형식 처리.
-    지원하지 않는 포맷은 ValueError 발생.
-transform
-    infer_date_from_path 를 monkeypatch 로 고정해 시각 필드 검증을 안정화.
-    각 row가 NormalizedChunk로 매핑되는지, 필드 매핑 규칙(아이디, 작성자, 게시 여부, 파일/컬렉션)이 정확한지 확인.
-    row가 아닌 블록은 무시.
-    결측값 시 기본값 적용(답변 "", 작성자 None, 공개 여부 False).
-"""
 
+# Collection enum이 있다면 일반적으로 Collection.wiki / Collection.qna 같은 멤버가 있을 것이라 가정
 TEST_COLLECTION = getattr(Collection, "qna", None) or getattr(Collection, "wiki", None)
 
-
-# ---------------------------
-# Helpers
-# ---------------------------
 def make_parsed_document(
     uri: str,
     rows: list[dict],
@@ -52,11 +37,12 @@ def make_parsed_document(
         collection=collection,
     )
 
-
-# ---------------------------
-# read_parsed_document()
-# ---------------------------
 def test_read_parsed_document_from_list_payload(tmp_path: Path):
+    """
+    qna json 파일을 읽어 ParsedDocument로 변환하는 메서드.
+    json 파일이 리스트 구조일 때 -> [ {...}, {...} ] 형태인 경우 테스트.
+    """
+
     tr = QnaTransformer()
     doc_dict = make_parsed_document(
         uri="file:///data/qna.tsv",
@@ -74,6 +60,11 @@ def test_read_parsed_document_from_list_payload(tmp_path: Path):
 
 
 def test_read_parsed_document_from_dict_with_data_list(tmp_path: Path):
+    """
+    qna json 파일을 읽어 ParsedDocument로 변환하는 메서드.
+    json 파일이 dict 안에 data 리스트일 때 -> { "data": [ {...}, {...} ] } 형태인 경우 테스트.
+    """
+
     tr = QnaTransformer()
     doc_dict = make_parsed_document(
         uri="file:///data/qna.tsv",
@@ -104,6 +95,10 @@ def test_read_parsed_document_from_single_dict(tmp_path: Path):
 
 
 def test_read_parsed_document_unsupported_format_raises(tmp_path: Path):
+    """
+    지원하지 않는 포맷은 예외 발생.
+    """
+
     tr = QnaTransformer()
     p = tmp_path / "bad.json"
     p.write_text('"just a string, not an object/list"', encoding="utf-8")
@@ -112,10 +107,11 @@ def test_read_parsed_document_unsupported_format_raises(tmp_path: Path):
         _ = list(tr.read_parsed_document(str(p)))
 
 
-# ---------------------------
-# transform()
-# ---------------------------
 def test_transform_maps_rows_to_chunks(monkeypatch):
+    """
+    row 블록을 NormalizedChunk로 매핑하는 메서드.
+    """
+
     tr = QnaTransformer(default_source_id="tsv")
 
     # infer_date_from_path를 고정된 값으로 패치
@@ -160,6 +156,10 @@ def test_transform_maps_rows_to_chunks(monkeypatch):
 
 
 def test_transform_skips_non_row_blocks(monkeypatch):
+    """
+    row 블록 외 다른 블록은 무시.
+    """
+
     tr = QnaTransformer()
     monkeypatch.setattr(
         "api_server.app.adapters.transformers.qna_transformer.infer_date_from_path",
@@ -167,7 +167,7 @@ def test_transform_skips_non_row_blocks(monkeypatch):
         raising=True,
     )
 
-    # row 1개 + body 1개 → body는 무시
+    # row 2개 + body 1개 -> body는 무시
     pd = ParsedDocument(
         source=SourceRef(uri="file:///d/qna.tsv", file_type=FileType.tsv),
         title=None,
@@ -187,6 +187,10 @@ def test_transform_skips_non_row_blocks(monkeypatch):
 
 
 def test_transform_defaults_when_missing_fields(monkeypatch):
+    """
+    결측값 시 기본값 적용: answer="", author=None, published=False(빈 문자열은 startswith('Y')가 False)
+    """
+
     tr = QnaTransformer()
     monkeypatch.setattr(
         "api_server.app.adapters.transformers.qna_transformer.infer_date_from_path",
@@ -194,7 +198,7 @@ def test_transform_defaults_when_missing_fields(monkeypatch):
         raising=True,
     )
 
-    # answer, user_id, published 누락 → answer="", author=None, published=False(빈 문자열은 startswith('Y')가 False)
+    # answer, user_id, published 누락 -> answer="", author=None, published=False(빈 문자열은 startswith('Y')가 False)
     pd = make_parsed_document(
         uri="file:///data/qna.tsv",
         rows=[
@@ -209,4 +213,4 @@ def test_transform_defaults_when_missing_fields(monkeypatch):
     assert c.question is None
     assert c.answer == ""          # 기본값
     assert c.author is None
-    assert c.published is False    # "":upper().startswith("Y") → False
+    assert c.published is False    # "":upper().startswith("Y") -> False

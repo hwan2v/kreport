@@ -1,18 +1,12 @@
-# api_server/tests/integration/test_api_search.py
-
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock
 import pytest
 
 from api_server.app.main import app
 from api_server.app.api.deps import get_search_service
-"""
-DI 오버라이드: Depends(get_search_service)를 목 객체로 교체해 라우터+의존성 레벨의 통합 테스트.
-기본값 사용: size=3, explain=False가 적용되어 호출되는지 확인.
-파라미터 오버라이드: 명시한 size, explain이 그대로 서비스에 전달되는지 확인.
-오류 전파: 서비스에서 예외 발생 시 현재 구현상 500으로 전파됨을 검증.
-(원하면 나중에 예외를 캐치해 4xx/5xx를 명시적으로 매핑하는 에러 핸들러 추가도 고려 가능해요.)
-"""
+from api_server.app.platform.exceptions import DomainError
+from opensearchpy.exceptions import ConnectionError
+
 
 @pytest.fixture
 def client():
@@ -34,9 +28,6 @@ def mock_search_service():
 
 @pytest.fixture(autouse=True)
 def override_dependency(mock_search_service):
-    """
-    라우터의 Depends(get_search_service)를 테스트 더블로 교체
-    """
     app.dependency_overrides[get_search_service] = lambda: mock_search_service
     yield
     app.dependency_overrides.clear()
@@ -46,7 +37,8 @@ def test_search_defaults(client, mock_search_service):
     """
     기본 파라미터(size=3, explain=False)가 적용되어 서비스가 호출되는지 검증
     """
-    payload = {"query": "카카오뱅크"}  # size/explain 생략 → 기본값 사용
+    mock_search_service.search.side_effect = None
+    payload = {"query": "카카오뱅크"}
     resp = client.post("/api/search", json=payload)
 
     assert resp.status_code == 200
@@ -73,6 +65,7 @@ def test_search_with_params(client, mock_search_service):
             ],
         }
     }
+    mock_search_service.search.side_effect = None
 
     resp = client.post("/api/search", json=payload)
     assert resp.status_code == 200
@@ -84,11 +77,31 @@ def test_search_with_params(client, mock_search_service):
     mock_search_service.search.assert_called_once_with(query="삼성전자", size=5, explain=True)
 
 
-def test_search_propagates_error_as_500(client, mock_search_service):
+def test_search_propagates_error_returns_500(client, mock_search_service):
     """
-    서비스에서 예외가 발생하면(현재 라우터에 에러 핸들링 없음) 500이 내려오는지 확인
+    서비스에서 임의 예외가 발생하면 500이 내려오는지 확인
     """
     mock_search_service.search.side_effect = RuntimeError("opensearch down")
 
-    resp = client.post("/api/search", json={"query": "네이버"})
+    resp = client.post("/api/search", json={"query": "신한은행"})
+    assert resp.status_code == 500
+
+
+def test_search_invalid_query_returns_400(client, mock_search_service):
+    """
+    서비스에서 예외가 발생하면 400이 내려오는지 확인
+    """
+    mock_search_service.search.side_effect = DomainError("invalid query")
+
+    resp = client.post("/api/search", json={"query": "신한은행"})
+    assert resp.status_code == 400
+
+
+def test_search_propagates_error_teturns_500(client, mock_search_service):
+    """
+    서비스에서 연결 예외가 발생하면 500이 내려오는지 확인
+    """
+    mock_search_service.search.side_effect = ConnectionError("opensearch down")
+
+    resp = client.post("/api/search", json={"query": "신한은행"})
     assert resp.status_code == 500

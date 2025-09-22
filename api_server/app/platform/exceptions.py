@@ -24,3 +24,7 @@ class IndexingFailed(DomainError):
     def __init__(self, index_name: str, reason: str):
         super().__init__(f"Indexing failed for {index_name}: {reason}")
         self.index_name = index_name
+
+class ServiceError(DomainError):
+    def __init__(self, message: str):
+        super().__init__(message)

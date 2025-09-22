@@ -1,5 +1,3 @@
-# api_server/tests/unit/adapters/searchers/test_opensearch_searcher.py
-
 from unittest.mock import MagicMock
 import pytest
 
@@ -13,6 +11,10 @@ def mock_client():
 
 
 def test_build_query_basic_structure(mock_client):
+    """
+    검색 쿼리 바디 구조 검증
+    """
+
     s = OpenSearchSearcher(client=mock_client, alias_name="my-alias")
     body = s._build_query(query="카카오뱅크")
 
@@ -68,6 +70,10 @@ def test_build_query_basic_structure(mock_client):
 
 
 def test_build_query_overrides(mock_client):
+    """
+    검색 쿼리 바디 오버라이드 검증
+    """
+
     s = OpenSearchSearcher(client=mock_client, alias_name="alias")
     body = s._build_query(query="네이버", size=10, explain=True, min_score=0.1)
 
@@ -77,6 +83,10 @@ def test_build_query_overrides(mock_client):
 
 
 def test_search_calls_client_with_alias_and_body(mock_client):
+    """
+    검색 호출 파라미터 검증
+    """
+
     s = OpenSearchSearcher(client=mock_client, alias_name="my-search-alias")
 
     # 클라이언트가 반환할 결과 모킹

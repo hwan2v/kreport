@@ -17,23 +17,7 @@ from api_server.app.domain.models import (
     IndexResult,
     AliasResult,
 )
-"""
-extract()
-    ListenPort.listen으로 받은 리소스들을 FetchPort.fetch → ParsePort.parse 순으로 호출하는지.
-    결과가 qna_3_parsed.json 같은 JSONL 파일로 저장되는지(줄 수/내용 확인).
-transform()
-    Transformer.read_parsed_document가 올바른 경로로 호출되는지.
-    Transformer.transform 결과가 *_normalized.json으로 저장되는지.
-index()
-    Indexer.create_index → Indexer.index → Indexer.rotate_alias_to_latest가 순서대로 호출되는지.
-    반환 결과가 두 결과 dict의 병합 형태인지.
-헬퍼
-    _get_resource_dir_path, _create_file_name 규칙 검증.
-"""
 
-# ---------------------------
-# Helpers
-# ---------------------------
 def make_parsed_doc(uri: str, rows: list[dict], collection=Collection.wiki):
     """row(meta dict)들을 가진 ParsedDocument 생성"""
     blocks = [ParsedBlock(type="row", text=None, meta=r) for r in rows]
@@ -71,9 +55,6 @@ def make_chunk(source_id="tsv_1", uri="file:///data/day_3/qna.tsv", collection="
     )
 
 
-# ---------------------------
-# Fixtures
-# ---------------------------
 @pytest.fixture
 def ports():
     """IndexService에 주입할 포트 목 객체들"""
@@ -98,10 +79,13 @@ def service(ports):
     )
 
 
-# ---------------------------
-# extract()
-# ---------------------------
-def test_extract_writes_parsed_jsonl_and_calls_ports(tmp_path: Path, service: IndexService, ports):
+def test_extract_writes_parsed_json_and_calls_ports(tmp_path: Path, service: IndexService, ports):
+    """
+    수집된 문서를 파싱하여 저장하는 메서드.
+    ListenPort.listen으로 받은 리소스들을 FetchPort.fetch -> ParsePort.parse 순으로 호출하는지.
+    결과가 qna_3_parsed.json 같은 JSON 파일로 저장되는지(줄 수/내용 확인).
+    """
+
     listener, fetcher, parser, transformer, indexer = ports
 
     # 리스너가 소스 파일 경로를 돌려줌
@@ -111,7 +95,7 @@ def test_extract_writes_parsed_jsonl_and_calls_ports(tmp_path: Path, service: In
     ]
     listener.listen.return_value = resource_files
 
-    # fetch → RawDocument
+    # fetch -> RawDocument
     raw1 = RawDocument(
         source=SourceRef(uri=resource_files[0], file_type=FileType.tsv),
         body_text="id\tquestion\tanswer\tpublished\tuser_id\n1\tQ\tA\tY\tu\n",
@@ -126,7 +110,7 @@ def test_extract_writes_parsed_jsonl_and_calls_ports(tmp_path: Path, service: In
     )
     fetcher.fetch.side_effect = [raw1, raw2]
 
-    # parser → ParsedDocument (간단히 row 1개씩)
+    # parser -> ParsedDocument (간단히 row 1개씩)
     pd1 = make_parsed_doc(resource_files[0], rows=[{"id": "1", "question": "Q", "answer": "A", "published": "Y", "user_id": "u"}], collection=Collection.qna)
     pd2 = make_parsed_doc(resource_files[1], rows=[{"id": "2", "question": "Q2", "answer": "A2", "published": "Y", "user_id": "u2"}], collection=Collection.qna)
     parser.parse.side_effect = [pd1, pd2]
@@ -143,7 +127,7 @@ def test_extract_writes_parsed_jsonl_and_calls_ports(tmp_path: Path, service: In
     assert out_name == expected_file.name  # 메서드는 파일명만 반환
     assert expected_file.exists()
 
-    # 내용: JSONL 2줄
+    # 내용: JSON 2줄
     lines = [l for l in expected_file.read_text(encoding="utf-8").splitlines() if l.strip()]
     assert len(lines) == 2
 
@@ -153,10 +137,13 @@ def test_extract_writes_parsed_jsonl_and_calls_ports(tmp_path: Path, service: In
     assert parser.parse.call_count == 2
 
 
-# ---------------------------
-# transform()
-# ---------------------------
 def test_transform_reads_parsed_and_writes_normalized(tmp_path: Path, service: IndexService, ports):
+    """
+    파싱된 문서를 색인 문서 형태로 변환하여 파일로 저장하는 메서드.
+    Transformer.read_parsed_document가 올바른 경로로 호출되는지.
+    Transformer.transform 결과가 *_normalized.json으로 저장되는지.
+    """
+
     listener, fetcher, parser, transformer, indexer = ports
 
     service._get_resource_dir_path = lambda source, date: str(tmp_path / f"{source}/day_{date}")
@@ -181,7 +168,7 @@ def test_transform_reads_parsed_and_writes_normalized(tmp_path: Path, service: I
     assert out_name == normalized_path.name
     assert normalized_path.exists()
 
-    # 내용: JSONL 1줄
+    # 내용: JSON 1줄
     lines = [l for l in normalized_path.read_text(encoding="utf-8").splitlines() if l.strip()]
     assert len(lines) == 1
     parsed_json = json.loads(lines[0])
@@ -189,13 +176,16 @@ def test_transform_reads_parsed_and_writes_normalized(tmp_path: Path, service: I
     assert parsed_json["collection"] == "qna"
 
 
-# ---------------------------
-# index()
-# ---------------------------
 def test_index_creates_indexes_and_rotates_alias(tmp_path: Path, service: IndexService, ports):
+    """
+    변환된 문서 NormalizedChunk를 색인하는 메서드.
+    Indexer.create_index -> Indexer.index -> Indexer.rotate_alias_to_latest가 순서대로 호출되는지.
+    반환 결과가 두 결과 dict의 병합 형태인지.
+    """
+
     listener, fetcher, parser, transformer, indexer = ports
 
-    # index()는 normalized 파일을 읽도록 Indexer에 경로를 넘김 → 실제 파일을 생성해둔다
+    # index()는 normalized 파일을 읽도록 Indexer에 경로를 넘김 -> 실제 파일을 생성해둔다
     service._get_resource_dir_path = lambda source, date: str(tmp_path / f"{source}/day_{date}")
     out_dir = Path(service._get_resource_dir_path("tsv", "3"))
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -228,10 +218,11 @@ def test_index_creates_indexes_and_rotates_alias(tmp_path: Path, service: IndexS
     assert result["index_name"] == ["myidx-tsv-3"]
 
 
-# ---------------------------
-# 내부 헬퍼
-# ---------------------------
 def test_internal_filename_helpers(tmp_path: Path, service: IndexService):
+    """
+    파일 이름 생성 메서드.
+    """
+
     # 고정 경로 포맷 확인
     p = service._get_resource_dir_path("html", "4")
     assert p.endswith("api_server/resources/data/html/day_4")

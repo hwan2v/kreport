@@ -1,5 +1,3 @@
-# api_server/tests/unit/domain/test_models.py
-
 from datetime import datetime, timedelta, timezone
 import pytest
 
@@ -15,16 +13,6 @@ from api_server.app.domain.models import (
     IndexResult,
     AliasResult,
 )
-"""
-Enum: 값·캐스팅 확인.
-SourceRef: 선택 필드(None 허용) 확인.
-RawDocument: 기본 필드(fetched_at) 자동 설정.
-ParsedBlock/ParsedDocument: 기본값·구조 검증.
-NormalizedChunk: 필수 필드/직렬화/시간·메타 필드 확인
-(주의: 현재 모델 정의상 file_type, collection은 str입니다. Enum이 아니라는 점을 테스트에서 반영했어요.)
-IndexErrorItem/IndexResult: 기본값·제약(ge=0) 검증.
-AliasResult: 필드 구조 검증.
-"""
 
 def test_enums_basic():
     # Enum 값과 캐스팅 동작
@@ -34,15 +22,22 @@ def test_enums_basic():
     assert FileType("tsv") is FileType.tsv
 
 def test_raw_document_defaults_and_types():
+    """
+    파일 타입 식별: 확장자별로 FileType, collection이 맞게 매핑되는지 체크.
+    """
+
     s = SourceRef(uri="file:///tmp/doc.html", file_type=FileType.html)
     r = RawDocument(source=s, body_text="<html/>", encoding="utf-8", collection=Collection.wiki)
     assert r.source is s
     assert r.collection == Collection.wiki
     assert isinstance(r.fetched_at, datetime)
-    # fetched_at은 자동으로 now로 들어오며 naive(UTC)일 수 있음 → 타입만 확인
 
 
 def test_parsed_block_defaults_and_meta():
+    """
+    ParsedBlock 기본값 검증.
+    """
+
     b = ParsedBlock()  # 기본값 사용
     assert b.type == "paragraph"  # 기본 type
     assert b.text is None
@@ -54,6 +49,9 @@ def test_parsed_block_defaults_and_meta():
 
 
 def test_parsed_document_structure():
+    """
+    ParsedDocument 구조 검증.
+    """
     s = SourceRef(uri="file:///tmp/wiki.html", file_type=FileType.html)
     blocks = [
         ParsedBlock(type="body", text="본문", meta={}),
@@ -71,6 +69,9 @@ def test_parsed_document_structure():
 
 
 def test_normalized_chunk_minimal_required_and_fields():
+    """
+    NormalizedChunk 필수 필드 검증.
+    """
     now = datetime(2024, 1, 1, 0, 0, 0)
     c = NormalizedChunk(
         source_id="src_1",
@@ -106,6 +107,9 @@ def test_normalized_chunk_minimal_required_and_fields():
 
 
 def test_normalized_chunk_requires_mandatory_fields():
+    """
+    NormalizedChunk 누락 필드 검증
+    """
     now = datetime.utcnow()
     # 필수 필드 누락 시 검증 에러
     with pytest.raises(Exception):
@@ -120,6 +124,10 @@ def test_normalized_chunk_requires_mandatory_fields():
 
 
 def test_index_error_item_and_result_defaults():
+    """
+    IndexErrorItem 기본값 검증.
+    """
+
     err = IndexErrorItem(doc_id="a1", seq=0, reason="mapper_parsing_exception")
     res = IndexResult(indexed=3, errors=[err])
 
@@ -134,11 +142,19 @@ def test_index_error_item_and_result_defaults():
 
 
 def test_index_result_indexed_ge_0_validation():
+    """
+    IndexResult indexed 필드 ge=0 제약 검증.
+    """
+
     with pytest.raises(Exception):
         _ = IndexResult(indexed=-1)  # ge=0 제약 위반
 
 
 def test_alias_result_shape():
+    """
+    AliasResult 필드 구조 검증.
+    """
+
     ar = AliasResult(index_name=["idx-a", "idx-b"], alias_name="myalias")
     assert ar.alias_name == "myalias"
     assert ar.index_name == ["idx-a", "idx-b"]

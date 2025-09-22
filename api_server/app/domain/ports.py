@@ -37,7 +37,7 @@ class FetchPort(Protocol):
 
 
 class ParsePort(Protocol):
-    """원문을 구조화된 문서로 파싱(HTML → 블록들)."""
+    """원문을 구조화된 문서로 파싱(HTML -> 블록들)."""
 
     def parse(self, raw: RawDocument) -> ParsedDocument:
         """

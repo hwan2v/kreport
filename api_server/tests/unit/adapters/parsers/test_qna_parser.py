@@ -1,5 +1,3 @@
-# api_server/tests/unit/adapters/parsers/test_qna_parser.py
-
 import pytest
 from pathlib import Path
 
@@ -14,19 +12,8 @@ from api_server.app.domain.models import (
 )
 from api_server.app.platform.exceptions import DomainError
 
-"""
-정상 파싱: 행이 ParsedBlock(type="row", text=None, meta=dict) 로 생성되고, 전체 메타(rows, columns)가 맞는지.
 
-공백 정리: 각 컬럼 값의 앞뒤 공백이 제거되는지.
-
-헤더 검증: 필수 컬럼 누락 시 ValueError 발생 및 메시지 확인.
-
-빈 입력 처리: 빈 문자열 입력 시 누락 컬럼 전체가 감지되는지.
-
-메타데이터 보존: RawDocument의 source/collection이 결과에 그대로 반영되는지.
-"""
-
-# 테스트에서 사용할 컬렉션(이름은 프로젝트 Enum에 맞춰 조정)
+# Collection enum이 있다면 일반적으로 Collection.wiki / Collection.qna 같은 멤버가 있을 것이라 가정
 TEST_COLLECTION = getattr(Collection, "qna", None) or getattr(Collection, "wiki", None)
 
 
@@ -41,6 +28,10 @@ def make_raw(tsv_text: str, uri: str = "file:///tmp/qna.tsv") -> RawDocument:
 
 
 def test_parse_valid_tsv_returns_blocks():
+    """
+    tsv 정상 파싱: 행이 ParsedBlock(type="row", text=None, meta=dict) 로 생성되고, 전체 메타(rows, columns)가 맞는지.
+    """
+
     parser = QnaParser()
     tsv = (
         "id\tquestion\tanswer\tpublished\tuser_id\n"
@@ -78,6 +69,9 @@ def test_parse_valid_tsv_returns_blocks():
 
 
 def test_parse_strips_whitespace_in_values():
+    """
+    공백 정리: 각 컬럼 값의 앞뒤 공백이 제거되는지.
+    """
     parser = QnaParser()
     tsv = (
         "id\tquestion\tanswer\tpublished\tuser_id\n"
@@ -97,6 +91,9 @@ def test_parse_strips_whitespace_in_values():
 
 
 def test_parse_raises_when_missing_required_columns():
+    """
+    필수 컬럼 누락 시 예외 발생하는지
+    """
     parser = QnaParser()
     # user_id 컬럼 누락
     tsv = (
@@ -115,19 +112,26 @@ def test_parse_raises_when_missing_required_columns():
 
 
 def test_parse_raises_on_empty_text():
+    """
+    빈 입력 처리: 빈 문자열 입력 시 누락 컬럼 전체가 감지되는지
+    """
     parser = QnaParser()
-    raw = make_raw("")  # 헤더조차 없음 → REQUIRED_COLS 전부 누락
+    raw = make_raw("")  # 헤더조차 없음 -> REQUIRED_COLS 전부 누락
 
     with pytest.raises(DomainError) as ei:
         _ = parser.parse(raw)
 
     msg = str(ei.value)
+    assert 'invalid file format' in msg
     for col in ["id", "question", "answer", "published", "user_id"]:
         assert col in msg
+    
 
 
 def test_parse_keeps_document_metadata():
-    """원본 RawDocument의 메타데이터(소스/컬렉션)가 보존되는지 확인"""
+    """
+    원본 RawDocument의 메타데이터(소스/컬렉션)가 보존되는지 확인
+    """
     parser = QnaParser()
     tsv = (
         "id\tquestion\tanswer\tpublished\tuser_id\n"

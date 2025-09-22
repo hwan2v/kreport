@@ -31,6 +31,8 @@ class FileFetcher(FetchPort):
         """
         try:
             path = self._convert_uri_to_path(uri)
+            if not path.exists():
+                raise FileNotFoundError("File not found")
             body_bytes = path.read_bytes()
 
             try:
@@ -62,7 +64,7 @@ class FileFetcher(FetchPort):
     def _convert_uri_to_path(self, uri: str) -> Path:
         """
         상대 경로나 file:// prefix가 있는 경우 절대 경로로 변환한다.
-        - file:// → 실제 파일 경로 문자열로 변환
+        - file:// -> 실제 파일 경로 문자열로 변환
         - expanduser(): ~ (홈 디렉터리) 기호를 실제 경로로 확장
         - resolve(): 상대 경로, .. 등을 제거하고 절대 경로로 변환
 

@@ -16,7 +16,7 @@ from api_server.app.platform.exceptions import DomainError, ResourceNotFound
 
 class WikiTransformer(TransformPort):
     """
-    ParsedDocument(HTML) → NormalizedChunk 한 건.
+    ParsedDocument(HTML) -> NormalizedChunk 한 건.
     - 문단 블록(text)들을 합쳐 body를 구성
     - 제목/언어/작성자 등은 정책에 따라 채움
     """

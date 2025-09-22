@@ -14,23 +14,11 @@ from api_server.app.domain.models import (
     Collection,
     NormalizedChunk,
 )
-"""
-read_parsed_document: JSONL(줄 단위 JSON) 파일에서 공백 라인을 무시하고 ParsedDocument를 올바르게 역직렬화하는지.
-    퍼센트 정규화: 12.3% → 12.30% 처럼 소수점 둘째 자리까지 포맷되는지.
-transform:
-    블록(body/summary/infobox/paragraph)을 정규화하여 NormalizedChunk에 채우는지.
-infer_date_from_path를 고정하여 날짜 필드 검증 안정화.
-    여러 문서 입력 시 source_id가 html_0, html_1처럼 증가하는지.
-    feature 스케일링(0~1)과 상대적 길이에 따른 차이가 반영되는지.
-"""
 
-
+# Collection enum이 있다면 일반적으로 Collection.wiki / Collection.qna 같은 멤버가 있을 것이라 가정
 TEST_COLLECTION = getattr(Collection, "wiki", None) or getattr(Collection, "qna", None)
 
 
-# ---------------------------
-# Helpers
-# ---------------------------
 def make_parsed_doc(
     *,
     uri: str = "file:///data/day_3/wiki.html",
@@ -58,10 +46,11 @@ def make_parsed_doc(
     )
 
 
-# ---------------------------
-# read_parsed_document()
-# ---------------------------
 def test_read_parsed_document_reads_jsonl(tmp_path: Path):
+    """
+    wiki json 파일을 읽어 ParsedDocument로 변환하는 메서드.
+    """
+
     tr = WikiTransformer()
 
     d1 = make_parsed_doc(title="A").model_dump(mode="json")
@@ -79,6 +68,11 @@ def test_read_parsed_document_reads_jsonl(tmp_path: Path):
 
 
 def test_read_parsed_document_ignores_empty_lines(tmp_path: Path):
+    """
+    wiki json 파일을 읽어 ParsedDocument로 변환하는 메서드.
+    공백 라인을 무시하고 ParsedDocument를 올바르게 읽어오는지 확인.
+    """
+
     tr = WikiTransformer()
     d1 = make_parsed_doc(title="OnlyOne").model_dump(mode="json")
     p = tmp_path / "docs.jsonl"
@@ -89,12 +83,12 @@ def test_read_parsed_document_ignores_empty_lines(tmp_path: Path):
     assert docs[0].title == "OnlyOne"
 
 
-# ---------------------------
-# _normalize_percentage()
-# ---------------------------
 def test_normalize_percentage_formats_to_two_decimals():
+    """
+    퍼센트 포맷을 소수점 둘째 자리까지 포맷하는 메서드.
+    """
+
     tr = WikiTransformer()
-    # 공개 메서드는 아니지만 동작이 중요하므로 직접 검증
     text = "성장률 3.1% / 점유율 25.0% / 오류율 0.0%"
     norm = tr._normalize_percentage(text)
     assert "3.10%" in norm
@@ -102,10 +96,11 @@ def test_normalize_percentage_formats_to_two_decimals():
     assert "0.00%" in norm
 
 
-# ---------------------------
-# transform()
-# ---------------------------
 def test_transform_builds_chunk_and_normalizes_percentages(monkeypatch):
+    """
+    퍼센트 포맷을 소수점 둘째 자리까지 포맷하는 메서드.
+    """
+
     tr = WikiTransformer(default_author=None, default_published=True, default_source_id="html")
 
     fixed_dt = datetime(2024, 2, 3, 4, 5, 6, tzinfo=timezone.utc)
@@ -132,7 +127,7 @@ def test_transform_builds_chunk_and_normalizes_percentages(monkeypatch):
     assert c.source_id == "html_0"          # 증가 번호
     assert c.source_path == doc.source.uri
     assert c.collection == TEST_COLLECTION
-    # file_type은 구현상 "html" 문자열을 사용 → 타입이 Enum이 아닐 수도 있으므로 값만 간접 확인
+    # file_type은 구현상 "html" 문자열을 사용 -> 타입이 Enum이 아닐 수도 있으므로 값만 간접 확인
     assert str(c.file_type).lower().endswith("html")
 
     # 날짜/작성자/공개여부
@@ -153,6 +148,9 @@ def test_transform_builds_chunk_and_normalizes_percentages(monkeypatch):
 
 
 def test_transform_multiple_docs_feature_scaling_and_ids(monkeypatch):
+    """
+    여러 문서 입력 시 source_id가 html_0, html_1처럼 증가하는지.
+    """
     tr = WikiTransformer(default_source_id="html")
 
     fixed_dt = datetime(2023, 9, 9, tzinfo=timezone.utc)

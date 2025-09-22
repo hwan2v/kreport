@@ -57,6 +57,9 @@ async def domain_exception_handler(request: Request, exc: domainex.DomainError):
     elif isinstance(exc, domainex.IndexingFailed):
         http_status = status.HTTP_502_BAD_GATEWAY
         code = "INDEXING_FAILED"
+    elif isinstance(exc, domainex.ServiceError):
+        http_status = status.HTTP_500_INTERNAL_SERVER_ERROR
+        code = "SERVICE_ERROR"
     else:
         http_status = status.HTTP_400_BAD_REQUEST
         code = "SERVICE_ERROR"
