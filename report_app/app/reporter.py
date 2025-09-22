@@ -372,6 +372,7 @@ if __name__ == "__main__":
             pipeline_client.run_pipeline(date="2")
             pipeline_client.run_pipeline(date="3")
             pipeline_client.close()
+            time.sleep(3)
             print("검색&리포트 단계 실행...")
             run_report(args)
 
