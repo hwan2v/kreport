@@ -28,8 +28,11 @@ from api_server.app.middlewares.request_context import RequestContextMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 로깅 등 공통 준비
-    setup_logging(log_to_file=True, log_dir="/var/log/app")
+    setup_logging(
+        log_to_file=True, 
+        as_json=True,
+        log_dir="/var/log/app", 
+        level="INFO")
 
     # OpenSearch 클라이언트를 한 번만 생성해서 공유
     u = urlparse(settings.OPENSEARCH_HOST)
@@ -59,5 +62,5 @@ app.add_exception_handler(domainex.DomainError, domain_exception_handler)
 app.add_exception_handler(Exception, unhandled_exception_handler)
 
 # 요청 컨텍스트/액세스 로그 미들웨어
-#app.add_middleware(RequestContextMiddleware)
+app.add_middleware(RequestContextMiddleware)
 

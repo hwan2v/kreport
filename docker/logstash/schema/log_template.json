@@ -8,7 +8,7 @@
       },
       "mappings": {
         "properties": {
-          "@timestamp": {"type": "date"},
+          "timestamp": {"type": "date"},
           "level":      {"type": "keyword"},
           "logger":     {"type": "keyword"},
           "trace_id":   {"type": "keyword"},

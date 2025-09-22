@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from api_server.app.api.deps import get_search_service, SearchService
+import logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/search", tags=["search"])
-
 
 class SearchRequest(BaseModel):
     query: str = Field(..., description="검색 쿼리")
@@ -12,5 +13,6 @@ class SearchRequest(BaseModel):
 
 @router.post("", summary="문서 추출 후 저장")
 def search(req: SearchRequest, svc: SearchService = Depends(get_search_service)):
+    logger.info(f"SearchRequest: {req}")
     result = svc.search(query=req.query, size=req.size, explain=req.explain)
     return {"success": True, "message": "검색 성공", "data": result}

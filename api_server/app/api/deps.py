@@ -1,5 +1,5 @@
-# app/api/deps.py
 from __future__ import annotations
+
 from typing import Generator
 from urllib.parse import urlparse
 
@@ -40,11 +40,10 @@ def get_opensearch(request: Request) -> OpenSearch:
     )
 
 
-# ---- 어댑터(구현) ----
-
 class PipelineResolver:
-    """source_type에 맞는 SearchService 조립기."""
     def __init__(self, os: OpenSearch) -> None:
+        # OpenSearch 클라이언트 주입
+        # IndexPort, SearchPort를 OpenSearch 구현체로 초기화
         self._indexer: IndexPort = OpenSearchIndexer(
             os, 
             settings.OPENSEARCH_INDEX, 
@@ -52,6 +51,11 @@ class PipelineResolver:
         self._searcher: SearchPort = OpenSearchSearcher(os, settings.OPENSEARCH_ALIAS)
 
     def for_type(self, source_type: str) -> IndexService:
+        """
+        주어진 source_type(html, tsv 등)에 맞는
+        파이프라인 구성 요소(listener, fetcher, parser, transformer)를 생성해서
+        IndexService를 반환한다.
+        """
         listener: ListenPort = FileListener()
         fetcher: FetchPort = FileFetcher()
 
@@ -73,8 +77,14 @@ class PipelineResolver:
         )
 
 def get_pipeline_resolver(os: OpenSearch = Depends(get_opensearch)) -> PipelineResolver:
+    """
+    FastAPI DI에서 OpenSearch 클라이언트를 받아 PipelineResolver를 생성해 주입한다.
+    """
     return PipelineResolver(os)
 
 def get_search_service(os: OpenSearch = Depends(get_opensearch)) -> SearchService:
+     """
+    FastAPI DI에서 OpenSearch 클라이언트를 받아 SearchService를 생성해 주입한다.
+    """
     searcher: SearchPort = OpenSearchSearcher(os, settings.OPENSEARCH_ALIAS)
     return SearchService(searcher)

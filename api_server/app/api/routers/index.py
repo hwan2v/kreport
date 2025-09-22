@@ -4,6 +4,8 @@ from typing import Literal, Dict, Any
 from api_server.app.api.deps import get_pipeline_resolver, PipelineResolver
 from api_server.app.domain.utils import choose_collection
 from api_server.app.domain.models import FileType
+import logging
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/index", tags=["index"])# dependencies=[Depends(require_api_key)])
@@ -20,6 +22,7 @@ def _run_index_one(resolver: PipelineResolver, ft: FileType, date: str) -> Any:
 
 @router.post("", summary="문서 인덱싱")
 def index(req: IndexRequest, resolver: PipelineResolver = Depends(get_pipeline_resolver)):
+    logger.info(f"IndexRequest: {req}")
     if req.source == "all":
         # html/tsv 각각 실행하고 타입별 결과를 dict로 반환
         results: Dict[str, Any] = {ft.value: _run_index_one(resolver, ft, req.date) for ft in FileType}
