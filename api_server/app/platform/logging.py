@@ -13,7 +13,7 @@ class RequestIDFilter(logging.Filter):
         record.request_id = request_id_ctx.get()
         return True
 
-def setup_logging(log_to_file: bool = False, log_dir: str = "./logs"):
+def setup_logging(log_to_file: bool = False, log_dir: str = "/var/log/app"):
     handlers: dict[str, dict] = {
         "console": {
             "class": "logging.StreamHandler",

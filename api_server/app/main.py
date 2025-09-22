@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from urllib.parse import urlparse
 from opensearchpy import OpenSearch
@@ -23,7 +24,6 @@ from api_server.app.platform.errors import (
 )
 from api_server.app.platform import exceptions as domainex
 from api_server.app.middlewares.request_context import RequestContextMiddleware
-
 
 
 @asynccontextmanager

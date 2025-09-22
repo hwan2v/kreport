@@ -31,7 +31,10 @@ class PipelineClient:
         self.base_url = base_url.rstrip("/")
         self.session = requests.Session()
         self.session.mount(base_url, adapter)
-        self.session.headers.update({"Connection": "keep-alive"})
+        self.session.headers.update({
+                "Connection": "keep-alive",
+                "Content-Type": "application/json"
+            })
 
     def close(self):
         try:
@@ -87,7 +90,10 @@ class SearchReport:
         self.api_url = api_url
         self.answer_dict = {}
         self.session = requests.Session()
-        self.session.headers.update({"Connection": "keep-alive"})
+        self.session.headers.update({
+                "Connection": "keep-alive",
+                "Content-Type": "application/json"
+            })
         self.session.mount(self.api_url, adapter)
         try:
             self.session.get(f"{self.api_url}/api/health", timeout=3)
@@ -315,8 +321,8 @@ if __name__ == "__main__":
         help='execution mode \
             (clean: clean index, \
             report: generate report, \
-            run_api: run api according to scenario)',
-        choices=['clean', 'report', 'run_api'],
+            scenario: run api according to scenario)',
+        choices=['clean', 'report', 'scenario'],
         default='report',
         dest='mode')
     parser.add_argument(
@@ -334,23 +340,34 @@ if __name__ == "__main__":
     parser.add_argument(
         '--api_url', 
         '-u',
-        default='http://localhost:8000',
+        default='http://k-api:8000',
         help='api url', 
         dest='api_url')
+    parser.add_argument(
+        '--opensearch_url', 
+        '-o',
+        default='http://opensearch:9200',
+        help='opensearch url', 
+        dest='opensearch_url')
+
 
     try:
         args = parser.parse_args()
         print(
-            f"report start: mode={args.mode} answer_file={args.answer_file} count={args.count} api_url={args.api_url}"
+            f"report start: mode={args.mode} \
+            answer_file={args.answer_file} \
+            count={args.count} \
+            api_url={args.api_url} \
+            opensearch_url={args.opensearch_url}"
         )
 
         if args.mode == 'clean':
-            res = requests.delete("http://localhost:9200/collection-*")
+            res = requests.delete(f"{args.opensearch_url}/collection-*")
             res.raise_for_status()
             print(f"clean index success: {res.text}")
 
-        elif args.mode == 'run_api':
-            pipeline_client = PipelineClient()
+        elif args.mode == 'scenario':
+            pipeline_client = PipelineClient(base_url=args.api_url)
             pipeline_client.run_pipeline(date="1")
             pipeline_client.run_pipeline(date="2")
             pipeline_client.run_pipeline(date="3")
